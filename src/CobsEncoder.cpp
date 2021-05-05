@@ -10,24 +10,22 @@
 */
 
 #include "CobsEncoder.hpp"
-#include <iostream>
+#include <cstdint>
 #include <cassert>
 
 static const uint8_t FRAME_MARKER = 0;
+static const EncodeResult EMPTY = { 0, 0 };
 
 
-#define FinishBlock(X)(*code_ptr = (X), code_ptr = target++, code = 0x01 )
-
-
-uint32_t CobsEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
+EncodeResult CobsEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
 {
     if (source_len == 0)
-        return 0;
+        return EMPTY;
 
-    uint32_t max_len = source_len + ((source_len - 1) / 254) + 1;
+    uint32_t max_len = MaxEncodeLen(source_len);
     assert(target_len >= max_len);
     if (target_len < max_len)
-        return 0;
+        return EMPTY;
 
     assert(source);
     assert(target);
@@ -35,39 +33,40 @@ uint32_t CobsEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t
     uint8_t* encode = target; // Encoded byte pointer
     uint8_t* codep = encode++; // Output code pointer
     uint8_t code = 1; // Code value
+    const uint8_t* byte = source;
 
-    for (const uint8_t* byte = source; source_len--; ++byte)
+    for (; source_len--; ++byte)
     {
-        if (*byte) // Byte not zero, write it
+        if (*byte != FRAME_MARKER) // Byte not zero, write it
             *encode++ = *byte, ++code;
 
-        if (!*byte || code == 0xff) // Input is zero or block completed, restart
+        if (*byte == FRAME_MARKER || code == 0xff) // Input is zero or block completed, restart
         {
             *codep = code, code = 1, codep = encode;
-            if (!*byte || source_len)
+            if (*byte == FRAME_MARKER || source_len)
                 ++encode;
         }
     }
     *codep = code; // Write final code value
 
-    return encode - target;
+    return EncodeResult(byte - source, encode - target);
 } 
 
-uint32_t CobsEncoder::Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
+EncodeResult CobsEncoder::Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
 {
     if (source_len == 0)
-        return 0;
+        return EMPTY;
 
-    uint32_t max_len = source_len - ((source_len - 1) / 254) + 1;
+    uint32_t max_len = MaxDecodeLen(source_len);
     assert(target_len >= max_len);
     if (target_len < max_len)
-        return 0;
+        return EMPTY;
 
     assert(source);
     assert(target);
 
     const uint8_t* byte = source; // Encoded input byte pointer
-    uint8_t* decode = (uint8_t*)target; // Decoded output byte pointer
+    uint8_t* decode = target; // Decoded output byte pointer
 
     for (uint8_t code = 0xff, block = 0; byte < source + source_len; --block)
     {
@@ -76,16 +75,26 @@ uint32_t CobsEncoder::Decode(const uint8_t* source, uint32_t source_len, uint8_t
         else
         {
             if (code != 0xff) // Encoded zero, write it
-                *decode++ = 0;
+                *decode++ = FRAME_MARKER;
             block = code = *byte++; // Next block length
             if (code == 0x00) // Delimiter code found
                 break;
         }
     }
 
-    return decode - (uint8_t*)target;
+    return EncodeResult(byte - source, decode - target);
 }
 
+uint32_t CobsEncoder::MaxEncodeLen(uint32_t source_len) const
+{
+    return source_len + ((source_len - 1) / 254) + 2;
+}
+
+uint32_t CobsEncoder::MaxDecodeLen(uint32_t source_len) const
+{
+    // Target should never be larger than source when decoding
+    return source_len; 
+}
 
 /*
 This is free and unencumbered software released into the public domain.

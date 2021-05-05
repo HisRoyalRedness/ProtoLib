@@ -1,6 +1,10 @@
 /*
-    A COBS encoder and decoder
-    http://www.stuartcheshire.org/papers/COBSforToN.pdf
+    A COBS encoder and decoder, with slight modifications
+    to allow encoding of longer runs of data
+
+    Reference:
+        http://www.stuartcheshire.org/papers/COBSforToN.pdf
+        https://en.wikipedia.org/wiki/Consistent_Overhead_Byte_Stuffing
 
     Keith Fletcher
     Apr 2021
@@ -22,28 +26,11 @@ public:
     // max 254 byte data 'chunks' after encoding
     static const uint32_t MAX_PACKET_SIZE = 254;
 
-    uint32_t Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
-    uint32_t Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
+    EncodeResult Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
+    EncodeResult Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
+    uint32_t MaxEncodeLen(uint32_t source_len) const override;
+    uint32_t MaxDecodeLen(uint32_t source_len) const override;
 
-#pragma region Convenience template implementation
-    template<size_t SRC_LEN>
-    uint32_t Encode(const uint8_t(&source)[SRC_LEN], uint8_t* target, uint32_t target_len)
-    {
-        return Encode(source, SRC_LEN, target, target_len);
-    }
-
-    template<size_t TGT_LEN>
-    uint32_t Encode(const uint8_t* source, uint32_t source_len, uint8_t(&target)[TGT_LEN])
-    {
-        return Encode(source, source_len, target, TGT_LEN);
-    }
-
-    template<size_t SRC_LEN, size_t TGT_LEN>
-    uint32_t Encode(const uint8_t(&source)[SRC_LEN], uint8_t(&target)[TGT_LEN])
-    {
-        return Encode(source, SRC_LEN, target, TGT_LEN);
-    }
-#pragma endregion
 };
 
 

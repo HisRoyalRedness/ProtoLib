@@ -12,11 +12,25 @@
 
 #include <cstdint>
 
+struct EncodeResult
+{
+    EncodeResult() : BytesRead(0), BytesWritten(0)
+    {}
+
+    EncodeResult(uint32_t bytes_read, uint32_t bytes_written) : BytesRead(bytes_read), BytesWritten(bytes_written)
+    {}
+
+    uint32_t BytesRead = 0;
+    uint32_t BytesWritten = 0;
+};
+
 class IFrameEncoder
 {
 public:
-    virtual uint32_t Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
-    virtual uint32_t Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
+    virtual EncodeResult Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
+    virtual EncodeResult Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
+    virtual uint32_t MaxEncodeLen(uint32_t source_len) const = 0;
+    virtual uint32_t MaxDecodeLen(uint32_t source_len) const = 0;
 };
 
 

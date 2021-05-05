@@ -1,72 +1,13 @@
-#include "Test_Common.hpp"
+#include "Test_CommonEncoder.hpp"
 #include "CobsEncoder.hpp"
 #include <list>
 #include <vector>
 
 using testing::ElementsAre;
 
-class CobsEncoderTest : public TestBase
+class CobsEncoderTest : public TestBase_Encoder<CobsEncoder, false> // Set to true to print buffers by default
 {
-protected:
-	constexpr uint32_t GetTargetSize(uint32_t source_len)
-	{
-		return source_len + (source_len / 254) + 1;
-	}
 
-	std::vector<uint8_t> Encode(std::initializer_list<uint8_t> source_list, bool print_source = true, bool print_target = true)
-	{
-		return Encode(std::vector<uint8_t>(source_list), print_source, print_target);
-	}
-
-	std::vector<uint8_t> Encode(std::vector<uint8_t> source_list, bool print_source = true, bool print_target = true)
-	{
-		if (print_source)
-			PrintBuffer("Clear", source_list);
-
-		std::vector<uint8_t> target(GetTargetSize(source_list.size()));
-		auto bytes_encoded = _encoder.Encode(source_list.data(), source_list.size(), target.data(), target.size());
-		
-		assert(source_list.size() == 0 || bytes_encoded > 0);
-		assert(bytes_encoded <= target.size());
-
-		if (bytes_encoded == 0)
-			target.clear();
-		else
-			target.resize(bytes_encoded);
-
-		if (print_target)
-			PrintBuffer("Encoded", target);
-
-		return target;
-	}
-
-	std::vector<uint8_t> Decode(std::initializer_list<uint8_t> source_list, bool print_source = true, bool print_target = true)
-	{
-		return Decode(std::vector<uint8_t>(source_list), print_source, print_target);
-	}
-
-	std::vector<uint8_t> Decode(std::vector<uint8_t> source_list, bool print_source = true, bool print_target = true)
-	{
-		if (print_source)
-			PrintBuffer("Encoded", source_list);
-
-		std::vector<uint8_t> target(source_list.size() + 1);
-		auto bytes_decoded = _encoder.Decode(source_list.data(), source_list.size(), target.data(), target.size());
-
-		assert(source_list.size() == 0 || bytes_decoded > 0);
-
-		if (bytes_decoded == 0)
-			target.clear();
-		else
-			target.resize(bytes_decoded);
-
-		if (print_target)
-			PrintBuffer("Decoded", target);
-
-		return target;
-	}
-
-	CobsEncoder _encoder;
 };
 
 // A minimal buffer consisting of only a zero
@@ -108,11 +49,11 @@ TEST_F(CobsEncoderTest, EncodeASmallBufferRoundTrip)
 {
 	ASSERT_THAT(
 		Encode({ 0x01, 0x02, 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05 }), 
-		ElementsAre(0x03, 0x01, 0x02, 0x04, 0x01, 0x02, 0x03, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05));
+		ToVec8({ 0x03, 0x01, 0x02, 0x04, 0x01, 0x02, 0x03, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05 }));
 
 	EXPECT_THAT(
 		Decode({ 0x03, 0x01, 0x02, 0x04, 0x01, 0x02, 0x03, 0x05, 0x01, 0x02, 0x03, 0x04, 0x06, 0x01, 0x02, 0x03, 0x04, 0x05 }, false),
-		ElementsAre(0x01, 0x02, 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05));
+		ToVec8({ 0x01, 0x02, 0x00, 0x01, 0x02, 0x03, 0x00, 0x01, 0x02, 0x03, 0x04, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05 }));
 }
 
 TEST_F(CobsEncoderTest, EncodePacketAtMaximumLength)
