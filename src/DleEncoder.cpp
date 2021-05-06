@@ -69,24 +69,50 @@ EncodeResult DleEncoder::Decode(const uint8_t* source, uint32_t source_len, uint
 
     while (source_cur < source + source_len && target_cur < target + target_len)
     {
-        // Data is escaped
-        if (*source_cur == DLE)
+        switch (*source_cur)
+        {
+
+        // Data is escaped.
+        case DLE:
         {
             // Is there another char after the escape?
             // If not, jump out, as we can't unescape 
             // until we receive some more data
             if (source_cur >= source + source_len - 1)
-            {
-                break;
-            }
+                return EncodeResult(
+                    static_cast<uint32_t>(source_cur - source),
+                    static_cast<uint32_t>(target_cur - target),
+                    true);
             else
             {
-                source_cur++; // Consume the DLE
+                // Consume the DLE
+                source_cur++;
+                // Is DLE followed by another reserved character? It shouldn't be...
+                if (STX == *source_cur || ETX == *source_cur || DLE == *source_cur)
+                {
+                    --source_cur; // Rewind the DLE
+                    return EncodeResult(
+                        static_cast<uint32_t>(source_cur - source),
+                        static_cast<uint32_t>(target_cur - target),
+                        true);
+                }
                 *target_cur++ = *source_cur++ ^ DLE; // Consume and unescape the data
-            }        }
-        else
-        {
+            }
+            break;
+        }
+
+        // Invalid characters during decoding. Return an error
+        case STX:
+        case ETX:
+            return EncodeResult(
+                static_cast<uint32_t>(source_cur - source),
+                static_cast<uint32_t>(target_cur - target),
+                true);
+
+        // A valid, non-escaped character
+        default:
             *target_cur++ = *source_cur++;
+            break;
         }
     }
 

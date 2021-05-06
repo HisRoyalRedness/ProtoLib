@@ -50,7 +50,7 @@ TEST_F(DleEncoderTest, DecodingNonReservedCharacters)
 	EXPECT_THAT(Decode(source), source);
 }
 
-TEST_F(DleEncoderTest, DecodeAnInvalidPacket)
+TEST_F(DleEncoderTest, DecodeAPacketEndingWithDle)
 {
 	std::vector<uint8_t> source({ 0x20, 0x21, DleEncoder::DLE });
 	std::vector<uint8_t> target(_encoder.MaxDecodeLen(source.size()));
@@ -62,5 +62,18 @@ TEST_F(DleEncoderTest, DecodeAnInvalidPacket)
 
 	target.resize(2);
 	EXPECT_THAT(target, ElementsAre(0x20, 0x21));
+}
+
+TEST_F(DleEncoderTest, DecodeAPacketContainingReservedCharacters)
+{
+	DecodeAnErrorPacket({ 0x01, DleEncoder::STX }, { 0x01 });
+	DecodeAnErrorPacket({ 0x01, DleEncoder::ETX }, { 0x01 });
+}
+
+TEST_F(DleEncoderTest, DecodeAPacketContainingEscapedReservedCharacters)
+{
+	DecodeAnErrorPacket({ 0x01, DleEncoder::DLE, DleEncoder::STX }, { 0x01 });
+	DecodeAnErrorPacket({ 0x01, DleEncoder::DLE, DleEncoder::ETX }, { 0x01 });
+	DecodeAnErrorPacket({ 0x01, DleEncoder::DLE, DleEncoder::DLE }, { 0x01 });
 }
 

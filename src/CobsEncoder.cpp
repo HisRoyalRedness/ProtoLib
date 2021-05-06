@@ -67,9 +67,14 @@ EncodeResult CobsEncoder::Decode(const uint8_t* source, uint32_t source_len, uin
 
     const uint8_t* byte = source; // Encoded input byte pointer
     uint8_t* decode = target; // Decoded output byte pointer
+    uint8_t block = 0;
 
-    for (uint8_t code = 0xff, block = 0; byte < source + source_len; --block)
+    for (uint8_t code = 0xff; byte < source + source_len; --block)
     {
+        // Finding a frame marker in data to decode is an error
+        if (FRAME_MARKER == *byte)
+            return EncodeResult(byte - source, decode - target, true);
+
         if (block) // Decode block byte
             *decode++ = *byte++;
         else
@@ -77,12 +82,15 @@ EncodeResult CobsEncoder::Decode(const uint8_t* source, uint32_t source_len, uin
             if (code != 0xff) // Encoded zero, write it
                 *decode++ = FRAME_MARKER;
             block = code = *byte++; // Next block length
-            if (code == 0x00) // Delimiter code found
-                break;
+
+            // If len is greater than the number of bytes left to read,
+            // we have an error
+            if (block > (source_len - (byte - source) + 1))
+                return EncodeResult(byte - source, decode - target, true);
         }
     }
 
-    return EncodeResult(byte - source, decode - target);
+    return EncodeResult(byte - source, decode - target, block != 0);
 }
 
 uint32_t CobsEncoder::MaxEncodeLen(uint32_t source_len) const

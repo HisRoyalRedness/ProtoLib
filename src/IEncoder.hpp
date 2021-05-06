@@ -14,14 +14,16 @@
 
 struct EncodeResult
 {
-    EncodeResult() : BytesRead(0), BytesWritten(0)
+    EncodeResult() : BytesRead(0), BytesWritten(0), Error(false)
     {}
 
-    EncodeResult(uint32_t bytes_read, uint32_t bytes_written) : BytesRead(bytes_read), BytesWritten(bytes_written)
+    EncodeResult(uint32_t bytes_read, uint32_t bytes_written, bool error = false) : 
+        BytesRead(bytes_read), BytesWritten(bytes_written), Error(error)
     {}
 
     uint32_t BytesRead = 0;
     uint32_t BytesWritten = 0;
+    bool Error = false;
 };
 
 class IFrameEncoder

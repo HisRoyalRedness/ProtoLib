@@ -136,3 +136,13 @@ TEST_F(CobsEncoderTest, EncodePacketPastMaximumLength)
 	EXPECT_THAT(Decode(buffer_encoded), buffer_clear);
 }
 
+TEST_F(CobsEncoderTest, DecodeDataWithAZero)
+{
+	DecodeAnErrorPacket({ 0x01, 0x02, 0x00 }, { 0x00 }, false, false);
+}
+
+TEST_F(CobsEncoderTest, DecodeDataWithLengthMismatch)
+{
+	DecodeAnErrorPacket({ 0x04, 0x02 }, { }, false, false);
+}
+
