@@ -21,3 +21,4 @@ target_include_directories(${BINARY}_lib PUBLIC
 
 target_link_libraries(${BINARY}_test gtest_main)
 target_link_libraries(${BINARY}_test gmock_main)
+

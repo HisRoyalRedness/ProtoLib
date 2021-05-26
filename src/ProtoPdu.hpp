@@ -1,5 +1,6 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    Communication protocol data unit.
+    Packets of data passed from one protocol layer to another
 
     Keith Fletcher
     May 2021
@@ -8,14 +9,16 @@
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
+#pragma once
 
-int main(int argc, char* argv[])
+#include <cstdint>
+
+class ProtoPdu
 {
-	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
+public:
+
+};
+
 
 
 /*

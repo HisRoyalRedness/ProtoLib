@@ -1,5 +1,5 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    Interface for packet framing
 
     Keith Fletcher
     May 2021
@@ -8,14 +8,18 @@
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
+#pragma once
 
-int main(int argc, char* argv[])
+#include <cstdint>
+
+class IFrame
 {
-	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
+public:
+    virtual uint32_t MaxFrameLen() const = 0;
+    virtual bool PackFrame(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
+    virtual bool UnpackFrame(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
+};
+
 
 
 /*

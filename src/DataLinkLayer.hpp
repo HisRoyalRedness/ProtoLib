@@ -1,5 +1,5 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    Datalink layer
 
     Keith Fletcher
     May 2021
@@ -8,14 +8,14 @@
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
+#pragma once
 
-int main(int argc, char* argv[])
+#include <cstdint>
+
+class DatalinkLayer
 {
-	::testing::InitGoogleTest(&argc, argv);
-	return RUN_ALL_TESTS();
-}
+
+};
 
 
 /*
