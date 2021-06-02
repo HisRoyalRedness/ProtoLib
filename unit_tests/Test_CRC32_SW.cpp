@@ -17,98 +17,80 @@
 using testing::ElementsAre;
 
 class CRC32_SW_Test : public TestBase
-{};
+{
+protected:
+	static constexpr uint32_t CUSTOM_INITIAL = 0x01020304;
+	static constexpr uint32_t CUSTOM_FINAL = 0x01020304;
+	static constexpr uint8_t INPUT_BUFFER[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
+
+	CRC32_SW m_crc;
+};
+
 
 TEST_F(CRC32_SW_Test, BlockCalcUnreflected_DefaultInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'};
-	CRC32_SW crc;
-	ASSERT_EQ(0x506853B6, crc.CalcBlock32(buffer, sizeof(buffer), false, false));
+	ASSERT_EQ(0x506853B6, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, false));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcInputReflected_DefaultInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0xA775B864, crc.CalcBlock32(buffer, sizeof(buffer), true, false));
+	ASSERT_EQ(0xA775B864, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, false));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcOutputReflected_DefaultInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x6DCA160A, crc.CalcBlock32(buffer, sizeof(buffer), false, true));
+	ASSERT_EQ(0x6DCA160A, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, true));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcInputAndOutputReflected_DefaultInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x261DAEE5, crc.CalcBlock32(buffer, sizeof(buffer), true, true));
+	ASSERT_EQ(0x261DAEE5, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, true));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcDefault_DefaultInitial)
 {
 	// Should default to reflected input and output
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x261DAEE5, crc.CalcBlock(buffer, sizeof(buffer)));
+	ASSERT_EQ(0x261DAEE5, m_crc.CalcBlock(INPUT_BUFFER, sizeof(INPUT_BUFFER)));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcUnreflected_CustomInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x74AFCC3F, crc.CalcBlock32(buffer, sizeof(buffer), false, false, 0x01020304));
+	ASSERT_EQ(0x74AFCC3F, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, false, CUSTOM_INITIAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcInputReflected_CustomInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x83B227ED, crc.CalcBlock32(buffer, sizeof(buffer), true, false, 0x01020304));
+	ASSERT_EQ(0x83B227ED, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, false, CUSTOM_INITIAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcOutputReflected_CustomInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0xFC33F52E, crc.CalcBlock32(buffer, sizeof(buffer), false, true, 0x01020304));
+	ASSERT_EQ(0xFC33F52E, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, true, CUSTOM_INITIAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcInputAndOutputReflected_CustomInitial)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0xB7E44DC1, crc.CalcBlock32(buffer, sizeof(buffer), true, true, 0x01020304));
+	ASSERT_EQ(0xB7E44DC1, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, true, CUSTOM_INITIAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcUnreflected_CustomFinal)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0xAE95AF4D, crc.CalcBlock32(buffer, sizeof(buffer), false, false, CRC32Calc_SW::CRC_DEFAULT_INITIAL, 0x01020304));
+	ASSERT_EQ(0xAE95AF4D, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, false, CRC32Calc_SW::CRC_DEFAULT_INITIAL, CUSTOM_FINAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcInputReflected_CustomFinal)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x5988449F, crc.CalcBlock32(buffer, sizeof(buffer), true, false, CRC32Calc_SW::CRC_DEFAULT_INITIAL, 0x01020304));
+	ASSERT_EQ(0x5988449F, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, false, CRC32Calc_SW::CRC_DEFAULT_INITIAL, CUSTOM_FINAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcOutputReflected_CustomFinal)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0x9337EAF1, crc.CalcBlock32(buffer, sizeof(buffer), false, true, CRC32Calc_SW::CRC_DEFAULT_INITIAL, 0x01020304));
+	ASSERT_EQ(0x9337EAF1, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, true, CRC32Calc_SW::CRC_DEFAULT_INITIAL, CUSTOM_FINAL));
 }
 
 TEST_F(CRC32_SW_Test, BlockCalcInputAndOutputReflected_CustomFinal)
 {
-	static const uint8_t buffer[] = { '1', '2', '3', '4', '5', '6', '7', '8', '9', '0' };
-	CRC32_SW crc;
-	ASSERT_EQ(0xD8E0521E, crc.CalcBlock32(buffer, sizeof(buffer), true, true, CRC32Calc_SW::CRC_DEFAULT_INITIAL, 0x01020304));
+	ASSERT_EQ(0xD8E0521E, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, true, CRC32Calc_SW::CRC_DEFAULT_INITIAL, CUSTOM_FINAL));
 }
 
 /*
