@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
 
 struct EncodeResult
 {

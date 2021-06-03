@@ -10,6 +10,7 @@
 
 #include "BuildVer.h"
 #include "gtest/gtest.h"
+#include "ProtoLib_Common.hpp"
 
 int main(int argc, char* argv[])
 {

@@ -13,9 +13,9 @@
 #include "gtest/gtest.h"
 #include "gmock/gmock.h" 
 #include "gmock/gmock-matchers.h" 
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
 #include <vector>
-#include<string>
+#include <string>
 
 class TestBase : public ::testing::Test
 {

@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
 
 template<typename T, size_t N>
 constexpr size_t dimof(const T(&inputArray)[N])

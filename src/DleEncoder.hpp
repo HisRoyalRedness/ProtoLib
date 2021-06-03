@@ -11,7 +11,7 @@
 #pragma once
 
 #include "IEncoder.hpp"
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
 
 class DleEncoder : public IFrameEncoder
 {

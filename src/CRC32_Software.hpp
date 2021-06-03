@@ -11,7 +11,7 @@
 #pragma once
 
 #include "ICRCEngine.hpp"
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
 
 // Heler methid to switch the bit endianness of a given value
 template<typename T>
@@ -73,7 +73,7 @@ class CRC32_SW: public ICRCEngine
 
 public:
     // ICRCEngine
-    uint32_t CalcBlock(std::unique_ptr<ProtoPdu> data) override;
+    uint32_t CalcBlock(std::unique_ptr<IProtoPdu> data) override;
     uint32_t CalcBlock(const uint8_t* buffer, size_t buffer_len) override;
 
 

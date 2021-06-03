@@ -1,15 +1,16 @@
 /*
-    Interface for packet framing
+    Common header for all ProtoLib files
 
     Keith Fletcher
-    May 2021
+    June 2021
 
     This file is Unlicensed.
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "IFrame.hpp"
+#pragma once
 
+#include <cstdint>
 
 
 /*

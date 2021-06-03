@@ -11,7 +11,7 @@
 #pragma once
 
 #include "ProtoPdu.hpp"
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
 #include <memory>
 
 class ICRCCalculation
@@ -26,7 +26,7 @@ public:
 class ICRCEngine
 {
 public:
-    virtual uint32_t CalcBlock(std::unique_ptr<ProtoPdu> data) = 0;
+    virtual uint32_t CalcBlock(std::unique_ptr<IProtoPdu> data) = 0;
     virtual uint32_t CalcBlock(const uint8_t* buffer, size_t buffer_len) = 0;
 };
 

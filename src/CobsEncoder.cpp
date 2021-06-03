@@ -10,7 +10,6 @@
 */
 
 #include "CobsEncoder.hpp"
-#include <cstdint>
 #include <cassert>
 
 static const uint8_t FRAME_MARKER = 0;

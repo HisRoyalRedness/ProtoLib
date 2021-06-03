@@ -11,12 +11,14 @@
 #pragma once
 
 #include "ProtoPdu.hpp"
-#include <cstdint>
+#include "ProtoLib_Common.hpp"
+#include <memory>
 
 class IProtoLayer
 {
 public:
-    virtual bool Send(const ProtoPdu& pdu) = 0;
+    virtual PduPtr Encode(PduPtr pdu) = 0;
+    virtual PduPtr Decode(PduPtr pdu) = 0;
 };
 
 

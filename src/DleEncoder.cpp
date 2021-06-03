@@ -9,7 +9,6 @@
 */
 
 #include "DleEncoder.hpp"
-#include <cstdint>
 #include <cassert>
 
 static const EncodeResult EMPTY = { 0, 0 };
