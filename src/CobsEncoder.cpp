@@ -10,7 +10,6 @@
 */
 
 #include "CobsEncoder.hpp"
-#include <cassert>
 
 static const uint8_t FRAME_MARKER = 0;
 static const EncodeResult EMPTY = { 0, 0 };

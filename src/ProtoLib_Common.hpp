@@ -11,7 +11,7 @@
 #pragma once
 
 #include <cstdint>
-
+#include <cassert>
 
 /*
 This is free and unencumbered software released into the public domain.
