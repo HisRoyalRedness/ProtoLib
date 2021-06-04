@@ -13,7 +13,7 @@
 #include "IEncoder.hpp"
 #include "ProtoLib_Common.hpp"
 
-class DleEncoder : public IFrameEncoder
+class DleEncoder final : public IFrameEncoder
 {
 public:
     static const uint8_t STX = 0x02;

@@ -14,20 +14,24 @@
 #include "ProtoLib_Common.hpp"
 #include <memory>
 
+template<typename TCRC>
 class ICRCCalculation
 {
 public:
     virtual void Reset() = 0;
-    virtual uint32_t Complete() = 0;
+    virtual TCRC Complete() = 0;
 
     virtual void AddData(uint8_t data) = 0;
 };
 
+template<typename TCRC>
 class ICRCEngine
 {
 public:
-    virtual uint32_t CalcBlock(std::unique_ptr<IProtoPdu> data) = 0;
-    virtual uint32_t CalcBlock(const uint8_t* buffer, size_t buffer_len) = 0;
+    virtual TCRC CalcBlock(std::unique_ptr<IProtoPdu> data) = 0;
+    virtual TCRC CalcBlock(const uint8_t* buffer, size_t buffer_len) = 0;
+
+    static constexpr size_t CrcSize() { return sizeof(TCRC); }
 };
 
 

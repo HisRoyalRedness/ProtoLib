@@ -15,6 +15,7 @@
 #include "IDiagnostics.hpp"
 #include <memory>
 
+
 //=====------------------------------------------------------------------------------
 // An interface to the PDU without the template argument 
 class IProtoPdu
@@ -24,28 +25,51 @@ public:
 
     virtual uint8_t* Data() = 0;
     virtual size_t GetDataLen() const = 0;
+    virtual void SetDataLen(size_t len) = 0;
     virtual size_t GetOffset() const = 0;
+    virtual void SetOffset(size_t offset) = 0;
     virtual size_t GetCapacity() const = 0;
+
+    virtual void ResetCursor() = 0;
+
+    template<typename T>
+    bool PutDown(T value)
+    {
+        for (size_t i = 0; i < sizeof(T); ++i)
+        {
+            const size_t shift = (sizeof(T) - i - 1) * 8;
+            T mask = (0xff << shift);
+            PutDownSingle(static_cast<uint8_t>((value & mask) >> shift));
+        }
+        return true;
+    }
+
+protected:
+    virtual bool PutDown(const uint8_t* buffer, size_t len) = 0;
+    virtual bool PutDownSingle(const uint8_t data) = 0;
 };
+
+
 
 
 //=====------------------------------------------------------------------------------
 // A statically-sized PDU
 template<size_t PDU_SIZE>
-class ProtoPdu : public IProtoPdu
+class ProtoPdu final : public IProtoPdu
 {
 public:
     uint8_t* Data() override { return &m_data[m_offset]; }
 
     size_t GetOffset() const override { return m_offset; }
-    void SetOffset(size_t offset)
+    void SetOffset(size_t offset) override
     { 
         assert(m_data_len + offset <= PDU_SIZE);
         m_offset = offset;
+        m_cursor = offset;
     }
 
     size_t GetDataLen() const override { return m_data_len; }
-    void SetDataLen(size_t len)
+    void SetDataLen(size_t len) override
     {
         assert(len + m_offset <= PDU_SIZE);
         m_data_len = len;
@@ -58,12 +82,50 @@ public:
         m_data_len = PDU_SIZE;
         m_offset = 0;
         std::memset(m_data, 0, sizeof(m_data));
+        ResetCursor();
+    }
+
+    void ResetCursor() override
+    {
+        m_cursor = m_offset;
+    }
+
+    bool PutDown(const uint8_t* buffer, size_t len) override
+    {
+        if (m_cursor + len - m_offset > m_data_len)
+        {
+            // no space
+            assert(false);
+            return false;
+        }
+        else
+        {
+            std::memcpy(&m_data[m_cursor], buffer, len);
+            m_cursor += len;
+            return true;
+        }
+    }
+
+    bool PutDownSingle(const uint8_t data) override
+    {
+        if (m_cursor + 1 - m_offset > m_data_len)
+        {
+            // no space
+            assert(false);
+            return false;
+        }
+        else
+        {
+            m_data[m_cursor++] = data;
+            return true;
+        }
     }
 
 private:
     uint8_t m_data[PDU_SIZE] = { 0 };
     size_t m_data_len = PDU_SIZE;
     size_t m_offset = 0;
+    size_t m_cursor = 0;
 };
 
 //=====------------------------------------------------------------------------------
@@ -78,7 +140,7 @@ namespace PduAllocattion
 {
     //=====--------------------------------------------------------------------------
     // The internal deallocator class
-    class PduDeallocator
+    class PduDeallocator final
     {
     public:
         PduDeallocator() : m_dealloc(nullptr) {}
@@ -114,7 +176,7 @@ public:
 // A container of statically-sized PDUs, with functions to allocate and return back 
 // to the pool
 template<size_t PDU_SIZE, size_t PDU_COUNT>
-class PduAllocator : public IPduAllocator, IPduDeallocator
+class PduAllocator final : public IPduAllocator, IPduDeallocator
 {
 
     // TODO: Allocate and free are not thread safe. 

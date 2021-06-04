@@ -21,10 +21,10 @@ public:
 	static constexpr size_t PDU_COUNT = 5;
 
 	// Put this line back in if you want to see the diagnostic output
-	PduAllocator_Test() : m_pdu_alloc(m_diag) {}
+	//PduAllocator_Test() : m_pdu_alloc(m_diag) {}
 
 protected:
-	void SetUp()
+	void SetUp() override
 	{
 		ASSERT_EQ(PDU_COUNT, m_pdu_alloc.Capacity());
 		ASSERT_EQ(PDU_COUNT, m_pdu_alloc.FreePdus());

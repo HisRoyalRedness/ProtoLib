@@ -1,57 +1,61 @@
 /*
-    Diagnostic logging
+	PDU unit tests
 
-    Keith Fletcher
-    June 2021
+	Keith Fletcher
+	June 2021
 
-    This file is Unlicensed.
-    See the foot of the file, or refer to <http://unlicense.org>
+	This file is Unlicensed.
+	See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#pragma once
+#include "ProtoPdu.hpp"
+#include "Diagnostics.hpp"
+#include "Test_Common.hpp"
 
-#include "IDiagnostics.hpp"
-#include "ProtoLib_Common.hpp"
+using testing::ElementsAre;
 
-
-class Diagnostics : public IDiagnostics
+class Pdu_Test : public TestBase
 {
 public:
-    virtual ~Diagnostics() { }
+	static constexpr size_t PDU_SIZE = 50;
+	static constexpr size_t PDU_COUNT = 2;
 
-    std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) override;
+	// Put this line back in if you want to see the diagnostic output
+	//PduAllocator_Test() : m_pdu_alloc(m_diag) {}
+
+protected:
+	void SetUp() override
+	{
+		// Allocate a fresh pdu
+		m_pdu = m_pdu_alloc.Allocate();
+	}
+
+	void TearDown() override
+	{
+		// Free up the PDU
+		m_pdu = nullptr;
+	}
+
+	Diagnostics m_diag;
+	PduAllocator<PDU_SIZE, PDU_COUNT> m_pdu_alloc;
+	PduPtr m_pdu;
 };
 
 
-class NullDiagnostics final : public IDiagnostics
+
+
+TEST_F(Pdu_Test, PutDownIsSequentialWithCursor)
 {
-public:
-    NullDiagnostics(NullDiagnostics const&) = delete;
-    void operator=(NullDiagnostics const&) = delete;
+	m_pdu->PutDown((uint32_t)0x01020304);
+	m_pdu->PutDown((uint16_t)0x0506U);
+	m_pdu->PutDown((uint8_t)0x07U);
 
-    static NullDiagnostics& Instance()
-    {
-        static NullDiagnostics instance;
-        return instance;
-    }
-
-    std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) override;
-
-private:
-    NullDiagnostics() {}
-
-    class NullStream : public std::ostream
-    {
-    public:
-        NullStream() : std::ostream(nullptr) {}
-        NullStream(const NullStream&) : std::ostream(nullptr) {}
-    } m_stream;
-};
-
-template <class T>
-const NullDiagnostics::NullStream& operator<<(NullDiagnostics::NullStream&& os, const T& value)
-{
-    return os;
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + 7),
+		ElementsAre(
+			0x01, 0x02, 0x03, 0x04,
+			0x05, 0x06,
+			0x07));	// The implied trailing 0
 }
 
 /*

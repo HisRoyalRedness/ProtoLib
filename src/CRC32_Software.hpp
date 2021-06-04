@@ -13,7 +13,7 @@
 #include "ICRCEngine.hpp"
 #include "ProtoLib_Common.hpp"
 
-// Heler methid to switch the bit endianness of a given value
+// Helper method to switch the bit endianness of a given value
 template<typename T>
 T Reflect(T val)
 {
@@ -33,12 +33,12 @@ T Reflect(T val)
 
 
 // Performs a single stateful per-byte CRC calculation
-class CRC32Calc_SW : public ICRCCalculation
+class CRC32Calc_SW : public ICRCCalculation<uint32_t>
 {
 public:
-    static constexpr uint32_t CRC_DEFAULT_INITIAL = 0xFFFFFFFF;
-    static constexpr uint32_t CRC_DEFAULT_FINAL = 0xFFFFFFFF;
-    static constexpr uint32_t CRC_POLYNOMIAL = 0x04C11DB7;
+    static constexpr uint32_t CRC_DEFAULT_INITIAL   = 0xFFFFFFFF;
+    static constexpr uint32_t CRC_DEFAULT_FINAL     = 0xFFFFFFFF;
+    static constexpr uint32_t CRC_POLYNOMIAL        = 0x04C11DB7;
 
     CRC32Calc_SW(
         bool reflect_input = false, 
@@ -66,10 +66,10 @@ private:
 };
 
 // Performs a stateless block CRC calculation
-class CRC32_SW: public ICRCEngine
+class CRC32_SW: public ICRCEngine<uint32_t>
 {
-    static constexpr bool DEFAULT_REFLECT_INPUT = true;
-    static constexpr bool DEFAULT_REFLECT_OUTPUT = true;
+    static constexpr bool DEFAULT_REFLECT_INPUT     = true;
+    static constexpr bool DEFAULT_REFLECT_OUTPUT    = true;
 
 public:
     // ICRCEngine
