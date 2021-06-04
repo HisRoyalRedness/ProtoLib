@@ -1,23 +1,56 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    Diagnostic logging
 
     Keith Fletcher
-    May 2021
+    June 2021
 
     This file is Unlicensed.
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
+#pragma once
+
+#include "IDiagnostics.hpp"
 #include "ProtoLib_Common.hpp"
 
-int main(int argc, char* argv[])
-{
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
 
+class Diagnostics : public IDiagnostics
+{
+public:
+    std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) override;
+};
+
+
+class NullDiagnostics : public IDiagnostics
+{
+public:
+    NullDiagnostics(NullDiagnostics const&) = delete;
+    void operator=(NullDiagnostics const&) = delete;
+
+    static NullDiagnostics& Instance()
+    {
+        static NullDiagnostics instance;
+        return instance;
+    }
+
+    std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) override;
+
+private:
+    NullDiagnostics() {}
+
+    class NullStream : public std::ostream
+    {
+    public:
+        NullStream() : std::ostream(nullptr) {}
+        NullStream(const NullStream&) : std::ostream(nullptr) {}
+    } m_stream;
+};
+
+template <class T>
+const NullDiagnostics::NullStream& operator<<(NullDiagnostics::NullStream&& os, const T& value)
+{
+    return os;
+}
 
 /*
 This is free and unencumbered software released into the public domain.

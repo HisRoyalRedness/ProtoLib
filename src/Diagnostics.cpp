@@ -1,21 +1,25 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    Diagnostic logging
 
     Keith Fletcher
-    May 2021
+    June 2021
 
     This file is Unlicensed.
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
-#include "ProtoLib_Common.hpp"
+#include "Diagnostics.hpp"
+#include <iostream>
 
-int main(int argc, char* argv[])
+std::ostream& Diagnostics::Log(DiagnosticDomain domain, DiagnosticLogLevel level)
 {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
+    // Naive implementation. Need to add domain and loglevel checks etc.
+    return std::cout;
+}
+
+std::ostream& NullDiagnostics::Log(DiagnosticDomain domain, DiagnosticLogLevel level)
+{
+    return m_stream;
 }
 
 

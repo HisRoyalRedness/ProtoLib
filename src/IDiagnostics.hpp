@@ -1,23 +1,38 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    Interface for diagnostic logging
 
     Keith Fletcher
-    May 2021
+    June 2021
 
     This file is Unlicensed.
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
+#pragma once
+
+#include "DiagnosticDomain.hpp"
 #include "ProtoLib_Common.hpp"
+#include <ostream>
 
-int main(int argc, char* argv[])
+enum class DiagnosticLogLevel
 {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+    Trace,
+    Debug,
+    Info,
+    Warning,
+    Error,
+    Fatal,
 
+    // Special values when enabling logging. Not to be used when logging messages
+    None,
+    All
+};
+
+class IDiagnostics
+{
+public:
+    virtual std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) = 0;
+};
 
 /*
 This is free and unencumbered software released into the public domain.

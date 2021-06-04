@@ -72,7 +72,7 @@ void CRC32Calc_SW::AddData(uint8_t data)
 
 uint32_t CRC32_SW::CalcBlock(std::unique_ptr<IProtoPdu> data)
 {
-	return CalcBlock32(data->Data(), data->DataLen());
+	return CalcBlock32(data->Data(), data->GetDataLen());
 }
 
 uint32_t CRC32_SW::CalcBlock(const uint8_t* buffer, size_t buffer_len)

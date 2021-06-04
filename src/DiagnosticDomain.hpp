@@ -1,22 +1,25 @@
-﻿/*
-    googletest unit test application entry point
+/*
+    The diagnostic domains defined for a given project
+    This will be replaced by a project-specific file
 
     Keith Fletcher
-    May 2021
+    June 2021
 
     This file is Unlicensed.
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
-#include "BuildVer.h"
-#include "gtest/gtest.h"
+#pragma once
+
 #include "ProtoLib_Common.hpp"
 
-int main(int argc, char* argv[])
+enum class DiagnosticDomain
 {
-    ::testing::InitGoogleTest(&argc, argv);
-    return RUN_ALL_TESTS();
-}
+    System,
+    Comms,
+    Memory
+};
+
 
 
 /*
