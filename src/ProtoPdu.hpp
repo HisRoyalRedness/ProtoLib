@@ -32,24 +32,75 @@ public:
 
     virtual void ResetCursor() = 0;
 
+    virtual bool Skip(size_t bytes_to_skip) = 0;
+
+    // The general case, for types that we haven't specialised
     template<typename T>
     bool PutDown(T value)
     {
         for (size_t i = 0; i < sizeof(T); ++i)
         {
             const size_t shift = (sizeof(T) - i - 1) * 8;
-            T mask = (0xff << shift);
+            T mask = (static_cast<T>(0xff) << shift);
             PutDownSingle(static_cast<uint8_t>((value & mask) >> shift));
         }
         return true;
     }
 
+    // PutDown - specialised cases
+    template<> bool PutDown(int8_t value) { return PutDownSingle(static_cast<uint8_t>(value)); }
+    template<> bool PutDown(uint8_t value) { return PutDownSingle(value); }
+    template<> bool PutDown(int16_t value) { return PutDownSingle(static_cast<uint16_t>(value)); }
+    template<> bool PutDown(uint16_t value) { return
+            PutDownSingle(static_cast<uint8_t>((value & 0xff00) >> 8)) &&
+            PutDownSingle(static_cast<uint8_t>(value & 0xff)); }
+    template<> bool PutDown(int32_t value) { return PutDownSingle(static_cast<uint32_t>(value)); }
+    template<> bool PutDown(uint32_t value) { return 
+            PutDownSingle(static_cast<uint8_t>((value & 0xff000000) >> 24)) && 
+            PutDownSingle(static_cast<uint8_t>((value & 0xff0000) >> 16)) &&
+            PutDownSingle(static_cast<uint8_t>((value & 0xff00) >> 8)) &&
+            PutDownSingle(static_cast<uint8_t>(value & 0xff)); }
+    template<> bool PutDown(int64_t value) { return PutDownSingle(static_cast<uint64_t>(value)); }
+    template<> bool PutDown(uint64_t value) { return
+        PutDownSingle(static_cast<uint8_t>((value & 0xff00000000000000) >> 56)) && 
+        PutDownSingle(static_cast<uint8_t>((value & 0xff000000000000) >> 48)) &&
+        PutDownSingle(static_cast<uint8_t>((value & 0xff0000000000) >> 40)) &&
+        PutDownSingle(static_cast<uint8_t>((value & 0xff00000000) >> 32)) &&
+        PutDownSingle(static_cast<uint8_t>((value & 0xff000000) >> 24)) &&
+        PutDownSingle(static_cast<uint8_t>((value & 0xff0000) >> 16)) &&
+        PutDownSingle(static_cast<uint8_t>((value & 0xff00) >> 8)) &&
+        PutDownSingle(static_cast<uint8_t>(value & 0xff)); }
+
+    bool PutDown(const uint8_t* value, size_t len)
+    {
+        for (size_t i = 0; i < len; ++i)
+            if (!PutDownSingle(value[i]))
+                return false;
+        return true;
+    }
+
+    template<typename T>
+    bool PickUp(T& value)
+    {
+        value = 0;
+        uint8_t byte = 0;
+        for (size_t i = 0; i < sizeof(T); ++i)
+        {
+            if (PickUpSingle(byte))
+                value = (value << 8) | byte;
+            else
+            {
+                value = 0;
+                return false;
+            }
+        }
+        return true;
+    }
+
 protected:
-    virtual bool PutDown(const uint8_t* buffer, size_t len) = 0;
     virtual bool PutDownSingle(const uint8_t data) = 0;
+    virtual bool PickUpSingle(uint8_t& data) = 0;
 };
-
-
 
 
 //=====------------------------------------------------------------------------------
@@ -75,6 +126,8 @@ public:
         m_data_len = len;
     }
 
+    size_t GetCursor() const { return m_cursor; }
+
     size_t GetCapacity() const override { return PDU_SIZE; }
 
     void Reset()
@@ -90,18 +143,17 @@ public:
         m_cursor = m_offset;
     }
 
-    bool PutDown(const uint8_t* buffer, size_t len) override
+    bool Skip(size_t bytes_to_skip) override
     {
-        if (m_cursor + len - m_offset > m_data_len)
+        if (m_cursor + bytes_to_skip - m_offset > m_data_len)
         {
             // no space
-            assert(false);
+            assert(m_cursor + bytes_to_skip - m_offset <= m_data_len);
             return false;
         }
         else
         {
-            std::memcpy(&m_data[m_cursor], buffer, len);
-            m_cursor += len;
+            m_cursor += bytes_to_skip;
             return true;
         }
     }
@@ -111,12 +163,27 @@ public:
         if (m_cursor + 1 - m_offset > m_data_len)
         {
             // no space
-            assert(false);
+            assert(m_cursor + 1 - m_offset <= m_data_len);
             return false;
         }
         else
         {
             m_data[m_cursor++] = data;
+            return true;
+        }
+    }
+
+    bool PickUpSingle(uint8_t& data) override
+    {
+        if (m_cursor - m_offset >= m_data_len)
+        {
+            // No more data to pick
+            assert(m_cursor - m_offset < m_data_len);
+            return false;
+        }
+        else
+        {
+            data = m_data[m_cursor++];
             return true;
         }
     }
@@ -151,7 +218,7 @@ namespace PduAllocattion
             if (nullptr != m_dealloc)
                 m_dealloc->FreePdu(*pdu);
             else
-                assert(false);
+                assert(nullptr == m_dealloc);
         }
 
     private:

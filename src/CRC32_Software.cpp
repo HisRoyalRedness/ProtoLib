@@ -70,9 +70,9 @@ void CRC32Calc_SW::AddData(uint8_t data)
 	m_accumulator = (m_accumulator << 8) ^ CRC_TABLE[pos];
 }
 
-uint32_t CRC32_SW::CalcBlock(std::unique_ptr<IProtoPdu> data)
+uint32_t CRC32_SW::CalcBlock(PduPtr pdu)
 {
-	return CalcBlock32(data->Data(), data->GetDataLen());
+	return CalcBlock32(pdu->Data(), pdu->GetDataLen());
 }
 
 uint32_t CRC32_SW::CalcBlock(const uint8_t* buffer, size_t buffer_len)

@@ -15,7 +15,7 @@
 
 // Helper method to switch the bit endianness of a given value
 template<typename T>
-T Reflect(T val)
+constexpr T Reflect(T val)
 {
     constexpr T BITS = sizeof(T) * 8;
     T resVal = 0;
@@ -39,10 +39,12 @@ public:
     static constexpr uint32_t CRC_DEFAULT_INITIAL   = 0xFFFFFFFF;
     static constexpr uint32_t CRC_DEFAULT_FINAL     = 0xFFFFFFFF;
     static constexpr uint32_t CRC_POLYNOMIAL        = 0x04C11DB7;
+    static constexpr bool DEFAULT_REFLECT_INPUT     = true;
+    static constexpr bool DEFAULT_REFLECT_OUTPUT    = true;
 
     CRC32Calc_SW(
-        bool reflect_input = false, 
-        bool reflect_output = false,
+        bool reflect_input = DEFAULT_REFLECT_INPUT,
+        bool reflect_output = DEFAULT_REFLECT_OUTPUT,
         uint32_t initial = CRC_DEFAULT_INITIAL,
         uint32_t final = CRC_DEFAULT_FINAL) :
         m_initial(initial),
@@ -61,27 +63,24 @@ private:
     const uint32_t m_initial                = CRC_DEFAULT_INITIAL;
     const uint32_t m_final                  = CRC_DEFAULT_FINAL;
     uint32_t m_accumulator                  = CRC_DEFAULT_INITIAL;
-    bool m_reflect_input                    = false;
-    bool m_reflect_output                   = false;
+    bool m_reflect_input                    = DEFAULT_REFLECT_INPUT;
+    bool m_reflect_output                   = DEFAULT_REFLECT_OUTPUT;
 };
 
 // Performs a stateless block CRC calculation
 class CRC32_SW: public ICRCEngine<uint32_t>
 {
-    static constexpr bool DEFAULT_REFLECT_INPUT     = true;
-    static constexpr bool DEFAULT_REFLECT_OUTPUT    = true;
-
 public:
     // ICRCEngine
-    uint32_t CalcBlock(std::unique_ptr<IProtoPdu> data) override;
+    uint32_t CalcBlock(PduPtr pdu) override;
     uint32_t CalcBlock(const uint8_t* buffer, size_t buffer_len) override;
 
 
     uint32_t CalcBlock32(
         const uint8_t* buffer, 
         size_t buffer_len, 
-        bool reflect_input = DEFAULT_REFLECT_INPUT,
-        bool reflect_output = DEFAULT_REFLECT_OUTPUT,
+        bool reflect_input = CRC32Calc_SW::DEFAULT_REFLECT_INPUT,
+        bool reflect_output = CRC32Calc_SW::DEFAULT_REFLECT_OUTPUT,
         uint32_t initial = CRC32Calc_SW::CRC_DEFAULT_INITIAL,
         uint32_t final = CRC32Calc_SW::CRC_DEFAULT_FINAL);
 };

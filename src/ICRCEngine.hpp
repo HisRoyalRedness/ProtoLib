@@ -28,7 +28,7 @@ template<typename TCRC>
 class ICRCEngine
 {
 public:
-    virtual TCRC CalcBlock(std::unique_ptr<IProtoPdu> data) = 0;
+    virtual TCRC CalcBlock(PduPtr pdu) = 0;
     virtual TCRC CalcBlock(const uint8_t* buffer, size_t buffer_len) = 0;
 
     static constexpr size_t CrcSize() { return sizeof(TCRC); }
