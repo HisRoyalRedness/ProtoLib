@@ -4,17 +4,107 @@
     Keith Fletcher
     May 2021
 
+        Datalink Frame
+        --------------
+        +---------------------+---------------+
+        | Data (variable len) | CRC (32 bits) |
+        +---------------------+---------------+
+
     This file is Unlicensed.
     See the foot of the file, or refer to <http://unlicense.org>
 */
 
 #pragma once
 
-#include <cstdint>
+#include "IProtoLayer.hpp"
+#include "IEncoder.hpp"
+#include "ICRCEngine.hpp"
+#include "ProtoLib_Common.hpp"
+#include "CRC32_Software.hpp"
 
-class DatalinkLayer
+template<typename TEncoder, typename TCRCEngine>
+class DatalinkLayer : public IProtoLayer
 {
+public:
+    PduPtr Encode(PduPtr pdu) override 
+    { 
+        if (!pdu)
+        {
+            assert(pdu);
+            return PduPtr();
+        }
 
+        const auto len = pdu->GetDataLen();
+        if (pdu->GetCapacity() >= len + m_crc_engine.CrcSize())
+        {
+            auto crc = m_crc_engine.CalcBlock(pdu->Data(), len);
+            pdu->ResetCursor();
+            pdu->Skip(len);
+            pdu->SetDataLen(len + sizeof(crc));
+            pdu->PutDown(crc);
+        }
+        else
+        {
+            assert(pdu->GetCapacity() >= len + m_crc_engine.CrcSize());
+            return PduPtr();
+        }
+
+        return std::move(pdu); 
+    }
+
+    PduPtr Decode(PduPtr pdu) override 
+    { 
+        if (!pdu)
+        {
+            assert(pdu);
+            return PduPtr();
+        }
+
+        // Get the CRC type
+        decltype((m_crc_engine.CalcBlock)(PduPtr())) crc;
+
+        // Extract the CRC and resize the PDU
+        const auto len = pdu->GetDataLen();
+        if (len >= m_crc_engine.CrcSize())
+        {
+            pdu->ResetCursor();
+            pdu->Skip(len - sizeof(crc));
+            
+            if (!pdu->PickUp(crc))
+            {
+                // Couldn't read the CRC for some reason
+                assert(false);
+                return PduPtr();
+            }
+            pdu->SetDataLen(len - sizeof(crc));
+        }
+        else
+        {
+            // Too small, not enough room for a CRC
+            assert(pdu->GetDataLen() >= m_crc_engine.CrcSize());
+            return PduPtr();
+        }
+
+        // Calculate and compare the CRC
+        pdu->ResetCursor();
+        auto crc_calc = m_crc_engine.CalcBlock(pdu->Data(), pdu->GetDataLen());
+
+        // CRC match?
+        if (crc_calc != crc)
+        {
+            assert(crc_calc == crc);
+            return PduPtr();
+        }
+
+        return std::move(pdu); 
+    }
+
+protected:
+
+
+private:
+    const TEncoder m_frame_encoder;
+    TCRCEngine m_crc_engine;
 };
 
 
