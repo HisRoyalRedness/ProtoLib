@@ -72,8 +72,7 @@ class CRC32_SW: public ICRCEngine<uint32_t>
 {
 public:
     // ICRCEngine
-    uint32_t CalcBlock(PduPtr pdu) override;
-    uint32_t CalcBlock(const uint8_t* buffer, size_t buffer_len) override;
+    uint32_t CalcBlock(const IProtoPdu& pdu) override;
 
 
     uint32_t CalcBlock32(

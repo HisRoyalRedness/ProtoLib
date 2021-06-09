@@ -10,16 +10,6 @@
 
 #include "DataLinkLayer.hpp"
 
-//PduPtr DatalinkLayer::Encode(PduPtr pdu)
-//{
-//    return std::move(pdu);
-//}
-//
-//PduPtr DatalinkLayer::Decode(PduPtr pdu)
-//{
-//    return std::move(pdu);
-//}
-
 
 /*
 This is free and unencumbered software released into the public domain.

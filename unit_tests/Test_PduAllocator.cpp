@@ -128,14 +128,14 @@ TEST_F(PduAllocator_Test, CustomPduLenAndOffset)
 
 TEST_F(PduAllocator_Test, MemoryIsClearedAfterDeallocation)
 {
-	uint8_t* pdu_mem = nullptr;
+	const uint8_t* pdu_mem = nullptr;
 	size_t len = 0;
 	{
 		// WARNING: If the implementation changes, this test could break
 		auto pdu = m_pdu_alloc.Allocate();
 		len = pdu->GetDataLen();
 		for (int i = 0; i < len; ++i)
-			pdu->Data()[i] = i;
+			const_cast<uint8_t*>(pdu->Data())[i] = i;
 		pdu_mem = pdu->Data();
 
 		// Data should be as we set it

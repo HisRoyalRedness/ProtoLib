@@ -37,7 +37,7 @@ public:
         const auto len = pdu->GetDataLen();
         if (pdu->GetCapacity() >= len + m_crc_engine.CrcSize())
         {
-            auto crc = m_crc_engine.CalcBlock(pdu->Data(), len);
+            auto crc = m_crc_engine.CalcBlock(*pdu);
             pdu->ResetCursor();
             pdu->Skip(len);
             pdu->SetDataLen(len + sizeof(crc));
@@ -61,7 +61,7 @@ public:
         }
 
         // Get the CRC type
-        decltype((m_crc_engine.CalcBlock)(PduPtr())) crc;
+        decltype((m_crc_engine.CalcBlock)(ProtoPdu<1>())) crc;
 
         // Extract the CRC and resize the PDU
         const auto len = pdu->GetDataLen();
@@ -87,7 +87,8 @@ public:
 
         // Calculate and compare the CRC
         pdu->ResetCursor();
-        auto crc_calc = m_crc_engine.CalcBlock(pdu->Data(), pdu->GetDataLen());
+        //auto crc_calc = m_crc_engine.CalcBlock(pdu->Data(), pdu->GetDataLen());
+        auto crc_calc = m_crc_engine.CalcBlock(*pdu);
 
         // CRC match?
         if (crc_calc != crc)

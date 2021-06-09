@@ -41,7 +41,7 @@ protected:
 	{
 		static constexpr uint8_t DATA[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50 };
 		for (int i = 0; i < sizeof(DATA); ++i)
-			m_pdu->Data()[i] = DATA[i];
+			const_cast<uint8_t*>(m_pdu->Data())[i] = DATA[i];
 	}
 
 	const ProtoPdu<PDU_SIZE>* TypedPdu() const { return reinterpret_cast<ProtoPdu<PDU_SIZE>*>(&*m_pdu); }

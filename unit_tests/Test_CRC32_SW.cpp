@@ -47,12 +47,6 @@ TEST_F(CRC32_SW_Test, BlockCalcInputAndOutputReflected_DefaultInitial)
 	ASSERT_EQ(0x261DAEE5, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), true, true));
 }
 
-TEST_F(CRC32_SW_Test, BlockCalcDefault_DefaultInitial)
-{
-	// Should default to reflected input and output
-	ASSERT_EQ(0x261DAEE5, m_crc.CalcBlock(INPUT_BUFFER, sizeof(INPUT_BUFFER)));
-}
-
 TEST_F(CRC32_SW_Test, BlockCalcUnreflected_CustomInitial)
 {
 	ASSERT_EQ(0x74AFCC3F, m_crc.CalcBlock32(INPUT_BUFFER, sizeof(INPUT_BUFFER), false, false, CUSTOM_INITIAL));

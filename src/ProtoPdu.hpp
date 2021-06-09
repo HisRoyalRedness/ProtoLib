@@ -23,7 +23,7 @@ class IProtoPdu
 public:
     virtual ~IProtoPdu() {};
 
-    virtual uint8_t* Data() = 0;
+    virtual const uint8_t* Data() const = 0;
     virtual size_t GetDataLen() const = 0;
     virtual void SetDataLen(size_t len) = 0;
     virtual size_t GetOffset() const = 0;
@@ -109,7 +109,7 @@ template<size_t PDU_SIZE>
 class ProtoPdu final : public IProtoPdu
 {
 public:
-    uint8_t* Data() override { return &m_data[m_offset]; }
+    const uint8_t* Data() const override { return &m_data[m_offset]; }
 
     size_t GetOffset() const override { return m_offset; }
     void SetOffset(size_t offset) override
