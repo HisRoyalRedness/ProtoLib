@@ -53,7 +53,7 @@ TEST_F(DatalinkLayer_Test, EncodingBasicData)
 	// Allocate a fresh pdu and populate
 	auto pdu = m_pdu_alloc.Allocate(sizeof(DECODED_DATA));
 	for (int i = 0; i < sizeof(DECODED_DATA); ++i)
-		(const_cast<uint8_t*>(pdu->Data())[i]) = DECODED_DATA[i];
+		pdu->WriteableData()[i] = DECODED_DATA[i];
 
 	// Encode the data
 	auto pdu_out = m_dl_layer_dle.Encode(std::move(pdu));
@@ -73,7 +73,7 @@ TEST_F(DatalinkLayer_Test, DecodingBasicData)
 	// Allocate a fresh pdu and populate
 	auto pdu = m_pdu_alloc.Allocate(sizeof(ENCODED_DATA));
 	for (int i = 0; i < sizeof(ENCODED_DATA); ++i)
-		(const_cast<uint8_t*>(pdu->Data())[i]) = ENCODED_DATA[i];
+		pdu->WriteableData()[i] = ENCODED_DATA[i];
 
 	// Encode the data
 	auto pdu_out = m_dl_layer_dle.Decode(std::move(pdu));

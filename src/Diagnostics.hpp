@@ -14,6 +14,8 @@
 #include "ProtoLib_Common.hpp"
 
 
+//=====------------------------------------------------------------------------------
+// Log to the console
 class Diagnostics : public IDiagnostics
 {
 public:
@@ -23,36 +25,6 @@ public:
 };
 
 
-class NullDiagnostics final : public IDiagnostics
-{
-public:
-    NullDiagnostics(NullDiagnostics const&) = delete;
-    void operator=(NullDiagnostics const&) = delete;
-
-    static NullDiagnostics& Instance()
-    {
-        static NullDiagnostics instance;
-        return instance;
-    }
-
-    std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) override;
-
-private:
-    NullDiagnostics() {}
-
-    class NullStream : public std::ostream
-    {
-    public:
-        NullStream() : std::ostream(nullptr) {}
-        NullStream(const NullStream&) : std::ostream(nullptr) {}
-    } m_stream;
-};
-
-template <class T>
-const NullDiagnostics::NullStream& operator<<(NullDiagnostics::NullStream&& os, const T& value)
-{
-    return os;
-}
 
 /*
 This is free and unencumbered software released into the public domain.

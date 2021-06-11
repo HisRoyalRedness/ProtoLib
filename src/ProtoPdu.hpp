@@ -25,14 +25,23 @@ public:
 
     virtual const uint8_t* Data() const = 0;
     virtual size_t GetDataLen() const = 0;
-    virtual void SetDataLen(size_t len) = 0;
+    virtual size_t GetMaxDataLen() const = 0;
+    virtual bool SetDataLen(size_t len) = 0;
     virtual size_t GetOffset() const = 0;
-    virtual void SetOffset(size_t offset) = 0;
+    virtual bool SetOffset(size_t offset) = 0;
     virtual size_t GetCapacity() const = 0;
+
+#ifdef UNITTEST
+    // Access points created specifically to make unit testing a little easier
+    virtual uint8_t* WriteableData() = 0;
+    virtual size_t GetReadCursor() const = 0;
+    virtual size_t GetWriteCursor() const = 0;
+#endif
 
     virtual void ResetCursor() = 0;
 
-    virtual bool Skip(size_t bytes_to_skip) = 0;
+    virtual bool SkipRead(size_t bytes_to_skip) = 0;
+    virtual bool SkipWrite(size_t bytes_to_skip) = 0;
 
     // The general case, for types that we haven't specialised
     template<typename T>
@@ -42,7 +51,20 @@ public:
         {
             const size_t shift = (sizeof(T) - i - 1) * 8;
             T mask = (static_cast<T>(0xff) << shift);
-            PutDownSingle(static_cast<uint8_t>((value & mask) >> shift));
+            if (!PutDownSingle(static_cast<uint8_t>((value & mask) >> shift)))
+                return false;
+        }
+        return true;
+    }
+
+    template<typename T>
+    bool PutDownRev(T value)
+    {
+        for (size_t i = 0; i < sizeof(T); ++i)
+        {
+            if (!PutDownSingleRev(static_cast<uint8_t>(value & 0xff)))
+                return false;
+            value >>= 8;
         }
         return true;
     }
@@ -60,7 +82,10 @@ public:
             PutDownSingle(static_cast<uint8_t>((value & 0xff0000) >> 16)) &&
             PutDownSingle(static_cast<uint8_t>((value & 0xff00) >> 8)) &&
             PutDownSingle(static_cast<uint8_t>(value & 0xff)); }
+#ifndef UNITTEST
+    // Excluded so unit tests can test the general case
     template<> bool PutDown(int64_t value) { return PutDownSingle(static_cast<uint64_t>(value)); }
+#endif
     template<> bool PutDown(uint64_t value) { return
         PutDownSingle(static_cast<uint8_t>((value & 0xff00000000000000) >> 56)) && 
         PutDownSingle(static_cast<uint8_t>((value & 0xff000000000000) >> 48)) &&
@@ -70,6 +95,32 @@ public:
         PutDownSingle(static_cast<uint8_t>((value & 0xff0000) >> 16)) &&
         PutDownSingle(static_cast<uint8_t>((value & 0xff00) >> 8)) &&
         PutDownSingle(static_cast<uint8_t>(value & 0xff)); }
+
+    template<> bool PutDownRev(int8_t value) { return PutDownSingleRev(static_cast<uint8_t>(value)); }
+    template<> bool PutDownRev(uint8_t value) { return PutDownSingleRev(value); }
+    template<> bool PutDownRev(int16_t value) { return PutDownSingleRev(static_cast<uint16_t>(value)); }
+    template<> bool PutDownRev(uint16_t value) { return
+            PutDownSingleRev(static_cast<uint8_t>(value)) && 
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)); }
+    template<> bool PutDownRev(int32_t value) { return PutDownSingleRev(static_cast<uint32_t>(value)); }
+    template<> bool PutDownRev(uint32_t value) { return 
+            PutDownSingleRev(static_cast<uint8_t>(value)) && 
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)); }
+#ifndef UNITTEST
+    // Excluded so unit tests can test the general case
+    template<> bool PutDownRev(int64_t value) { return PutDownSingleRev(static_cast<uint64_t>(value)); }
+#endif
+    template<> bool PutDownRev(uint64_t value) { return
+            PutDownSingleRev(static_cast<uint8_t>(value)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)) &&
+            PutDownSingleRev(static_cast<uint8_t>(value >>= 8)); }
 
     bool PutDown(const uint8_t* value, size_t len)
     {
@@ -98,7 +149,18 @@ public:
     }
 
 protected:
+    /// <summary>
+    /// Put down a single byte and increment the cursor by 1
+    /// </summary>
+    /// <param name="data">The byte to write at the current cursor location</param>
+    /// <returns>True is the write was successful, false otherwise</returns>
     virtual bool PutDownSingle(const uint8_t data) = 0;
+    /// <summary>
+    /// Put down a single byte and decrement the cursor by 1
+    /// </summary>
+    /// <param name="data">The byte to write at the current cursor location</param>
+    /// <returns>True is the write was successful, false otherwise</returns>
+    virtual bool PutDownSingleRev(const uint8_t data) = 0;
     virtual bool PickUpSingle(uint8_t& data) = 0;
 };
 
@@ -112,21 +174,41 @@ public:
     const uint8_t* Data() const override { return &m_data[m_offset]; }
 
     size_t GetOffset() const override { return m_offset; }
-    void SetOffset(size_t offset) override
+    bool SetOffset(size_t offset) override
     { 
-        assert(m_data_len + offset <= PDU_SIZE);
+        if (m_data_len + offset > PDU_SIZE)
+        {
+            assert(false);
+            return false;
+        }
+
         m_offset = offset;
-        m_cursor = offset;
+        if (m_read_cursor < offset)
+            m_read_cursor = offset;
+        if (m_write_cursor < offset)
+            m_write_cursor = offset;
+        return true;
     }
 
     size_t GetDataLen() const override { return m_data_len; }
-    void SetDataLen(size_t len) override
+    bool SetDataLen(size_t len) override
     {
-        assert(len + m_offset <= PDU_SIZE);
+        if (m_data_len + m_offset > PDU_SIZE)
+        {
+            assert(false);
+            return false;
+        }
         m_data_len = len;
+        return true;
     }
 
-    size_t GetCursor() const { return m_cursor; }
+    size_t GetMaxDataLen() const override { return PDU_SIZE - m_offset; }
+
+#ifdef UNITTEST
+    uint8_t* WriteableData() override { return &m_data[m_offset]; }
+    size_t GetReadCursor() const { return m_read_cursor - m_offset; }
+    size_t GetWriteCursor() const { return m_write_cursor - m_offset; }
+#endif
 
     size_t GetCapacity() const override { return PDU_SIZE; }
 
@@ -140,50 +222,91 @@ public:
 
     void ResetCursor() override
     {
-        m_cursor = m_offset;
+        m_read_cursor = m_offset;
+        m_write_cursor = m_offset;
     }
 
-    bool Skip(size_t bytes_to_skip) override
+    bool SkipRead(size_t bytes_to_skip) override
     {
-        if (m_cursor + bytes_to_skip - m_offset > m_data_len)
+        if (m_read_cursor + bytes_to_skip - m_offset > m_data_len)
         {
             // no space
-            assert(m_cursor + bytes_to_skip - m_offset <= m_data_len);
+            assert(m_read_cursor + bytes_to_skip - m_offset <= m_data_len);
             return false;
         }
         else
         {
-            m_cursor += bytes_to_skip;
+            m_read_cursor += bytes_to_skip;
             return true;
         }
     }
 
-    bool PutDownSingle(const uint8_t data) override
+    bool SkipWrite(size_t bytes_to_skip) override
     {
-        if (m_cursor + 1 - m_offset > m_data_len)
+        if (m_write_cursor + bytes_to_skip - m_offset > m_data_len)
         {
             // no space
-            assert(m_cursor + 1 - m_offset <= m_data_len);
+            assert(m_write_cursor + bytes_to_skip - m_offset <= m_data_len);
             return false;
         }
         else
         {
-            m_data[m_cursor++] = data;
+            m_write_cursor += bytes_to_skip;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Put down a single byte and increment the cursor by 1
+    /// </summary>
+    /// <param name="data">The byte to write at the current cursor location</param>
+    /// <returns>True is the write was successful, false otherwise</returns>
+    bool PutDownSingle(const uint8_t data) override
+    {
+        if (m_write_cursor + 1 - m_offset > m_data_len)
+        {
+            // no space
+            assert(m_write_cursor + 1 - m_offset <= m_data_len);
+            return false;
+        }
+        else
+        {
+            m_data[m_write_cursor++] = data;
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Put down a single byte and decrement the cursor by 1
+    /// </summary>
+    /// <param name="data">The byte to write at the current cursor location</param>
+    /// <returns>True is the write was successful, false otherwise</returns>
+    bool PutDownSingleRev(const uint8_t data) override
+    {
+        if (m_write_cursor <= m_offset)
+        {
+            // no space
+            assert(m_write_cursor > m_offset);
+            return false;
+        }
+        else
+        {
+            m_data[--m_write_cursor] = data;
             return true;
         }
     }
 
     bool PickUpSingle(uint8_t& data) override
     {
-        if (m_cursor - m_offset >= m_data_len)
+        if (m_read_cursor - m_offset >= m_data_len)
         {
             // No more data to pick
-            assert(m_cursor - m_offset < m_data_len);
+            assert(m_read_cursor - m_offset < m_data_len);
             return false;
         }
         else
         {
-            data = m_data[m_cursor++];
+            data = m_data[m_read_cursor++];
             return true;
         }
     }
@@ -192,7 +315,8 @@ private:
     uint8_t m_data[PDU_SIZE] = { 0 };
     size_t m_data_len = PDU_SIZE;
     size_t m_offset = 0;
-    size_t m_cursor = 0;
+    size_t m_read_cursor = 0;
+    size_t m_write_cursor = 0;
 };
 
 //=====------------------------------------------------------------------------------

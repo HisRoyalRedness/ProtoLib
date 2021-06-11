@@ -28,11 +28,46 @@ enum class DiagnosticLogLevel
     All
 };
 
+//=====------------------------------------------------------------------------------
+// General diagnostic logging interface
 class IDiagnostics
 {
 public:
     virtual std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) = 0;
 };
+
+//=====------------------------------------------------------------------------------
+// A Null class for when we don't want to log diagnostics
+class NullDiagnostics final : public IDiagnostics
+{
+public:
+    NullDiagnostics(NullDiagnostics const&) = delete;
+    void operator=(NullDiagnostics const&) = delete;
+
+    static NullDiagnostics& Instance()
+    {
+        static NullDiagnostics instance;
+        return instance;
+    }
+
+    std::ostream& Log(DiagnosticDomain domain, DiagnosticLogLevel level) override;
+
+private:
+    NullDiagnostics() {}
+
+    class NullStream : public std::ostream
+    {
+    public:
+        NullStream() : std::ostream(nullptr) {}
+        NullStream(const NullStream&) : std::ostream(nullptr) {}
+    } m_stream;
+};
+
+template <class T>
+const NullDiagnostics::NullStream& operator<<(NullDiagnostics::NullStream&& os, const T& value)
+{
+    return os;
+}
 
 /*
 This is free and unencumbered software released into the public domain.

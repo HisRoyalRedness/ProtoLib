@@ -135,7 +135,7 @@ TEST_F(PduAllocator_Test, MemoryIsClearedAfterDeallocation)
 		auto pdu = m_pdu_alloc.Allocate();
 		len = pdu->GetDataLen();
 		for (int i = 0; i < len; ++i)
-			const_cast<uint8_t*>(pdu->Data())[i] = i;
+			pdu->WriteableData()[i] = i;
 		pdu_mem = pdu->Data();
 
 		// Data should be as we set it

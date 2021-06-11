@@ -14,6 +14,7 @@
 
 using testing::ElementsAre;
 
+#pragma region Test class
 class Pdu_Test : public TestBase
 {
 public:
@@ -28,7 +29,8 @@ protected:
 	{
 		// Allocate a fresh pdu
 		m_pdu = m_pdu_alloc.Allocate();
-		ASSERT_EQ(0, TypedPdu()->GetCursor());
+		ASSERT_EQ(0, TypedPdu()->GetReadCursor());
+		ASSERT_EQ(0, TypedPdu()->GetWriteCursor());
 	}
 
 	void TearDown() override
@@ -39,9 +41,9 @@ protected:
 
 	void PopulatePdu()
 	{
-		static constexpr uint8_t DATA[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50 };
+		static constexpr uint8_t DATA[] = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90 };
 		for (int i = 0; i < sizeof(DATA); ++i)
-			const_cast<uint8_t*>(m_pdu->Data())[i] = DATA[i];
+			m_pdu->WriteableData()[i] = DATA[i];
 	}
 
 	const ProtoPdu<PDU_SIZE>* TypedPdu() const { return reinterpret_cast<ProtoPdu<PDU_SIZE>*>(&*m_pdu); }
@@ -51,46 +53,48 @@ protected:
 	PduPtr m_pdu;
 
 };
+#pragma endregion Test class
 
+#pragma region PutDown tests
 TEST_F(Pdu_Test, PutDownUInt8)
 {
-	constexpr auto data = static_cast<uint8_t>(0x12UL);
+	constexpr auto data = 0x12ui8;
 	ASSERT_TRUE(m_pdu->PutDown(data));
 
 	ASSERT_THAT(
 		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
 		ElementsAre(
 			0x12, 0x00));
-	ASSERT_EQ(sizeof(data), TypedPdu()->GetCursor());
+	ASSERT_EQ(sizeof(data), TypedPdu()->GetWriteCursor());
 }
 
 TEST_F(Pdu_Test, PutDownUInt16)
 {
-	constexpr auto data = static_cast<uint16_t>(0x1234UL);
+	constexpr auto data = 0x1234ui16;
 	ASSERT_TRUE(m_pdu->PutDown(data));
 
 	ASSERT_THAT(
 		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
 		ElementsAre(
 			0x12, 0x34, 0x00));
-	ASSERT_EQ(sizeof(data), TypedPdu()->GetCursor());
+	ASSERT_EQ(sizeof(data), TypedPdu()->GetWriteCursor());
 }
 
 TEST_F(Pdu_Test, PutDownUInt32)
 {
-	constexpr auto data = static_cast<uint32_t>(0x12345678UL);
+	constexpr auto data = 0x12345678ui32;
 	ASSERT_TRUE(m_pdu->PutDown(data));
 
 	ASSERT_THAT(
 		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
 		ElementsAre(
 			0x12, 0x34, 0x56, 0x78, 0x00));
-	ASSERT_EQ(sizeof(data), TypedPdu()->GetCursor());
+	ASSERT_EQ(sizeof(data), TypedPdu()->GetWriteCursor());
 }
 
 TEST_F(Pdu_Test, PutDownUInt64)
 {
-	constexpr auto data = static_cast<uint64_t>(0x1234567801020304ULL);
+	constexpr auto data = 0x1234567801020304ui64;
 	ASSERT_TRUE(m_pdu->PutDown(data));
 
 	ASSERT_THAT(
@@ -98,48 +102,38 @@ TEST_F(Pdu_Test, PutDownUInt64)
 		ElementsAre(
 			0x12, 0x34, 0x56, 0x78,
 			0x01, 0x02, 0x03, 0x04, 0x00));
-	ASSERT_EQ(sizeof(data), TypedPdu()->GetCursor());
+	ASSERT_EQ(sizeof(data), TypedPdu()->GetWriteCursor());
 }
 
-TEST_F(Pdu_Test, SkipIncreasesTheCursor)
+TEST_F(Pdu_Test, PutDownInt64_GeneralCase)
 {
-	ASSERT_TRUE(m_pdu->Skip(1));
-	ASSERT_TRUE(m_pdu->PutDown((uint8_t)0x12));
-	ASSERT_TRUE(m_pdu->Skip(2));
-	ASSERT_TRUE(m_pdu->PutDown((uint16_t)0x3456));
+	// The template specialisation for this type has been excluded in
+	// the unit test build so that the general template case can be tested
+	constexpr auto data = 0x1234567801020304i64;
+	ASSERT_TRUE(m_pdu->PutDown(data));
 
 	ASSERT_THAT(
-		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + 7),
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
 		ElementsAre(
-			0x00, 0x12, 0x00, 0x00, 0x34, 0x56, 0x00));
-	ASSERT_EQ(6, TypedPdu()->GetCursor());
+			0x12, 0x34, 0x56, 0x78,
+			0x01, 0x02, 0x03, 0x04, 0x00));
+	ASSERT_EQ(sizeof(data), TypedPdu()->GetWriteCursor());
 }
 
 TEST_F(Pdu_Test, PutDownIsSequentialWithCursor)
 {
-	m_pdu->PutDown((uint32_t)0x01020304);
-	m_pdu->PutDown((uint16_t)0x0506U);
-	m_pdu->PutDown((uint8_t)0x07U);
+	m_pdu->PutDown(0x1122334455667788ui64);
+	m_pdu->PutDown(0x01020304ui32);
+	m_pdu->PutDown(0x0506ui16);
+	m_pdu->PutDown(0x07ui8);
 
 	ASSERT_THAT(
-		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + 7),
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + 15),
 		ElementsAre(
+			0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88,
 			0x01, 0x02, 0x03, 0x04,
 			0x05, 0x06,
 			0x07));
-}
-
-TEST_F(Pdu_Test, SkipToTheMaximum)
-{
-	ASSERT_TRUE(m_pdu->Skip(PDU_SIZE));
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
-}
-
-TEST_F(Pdu_Test, SkipPastTheMaximum)
-{
-	ASSERT_TRUE(m_pdu->Skip(PDU_SIZE));
-	ASSERT_DEATH({ m_pdu->Skip(1); }, "Assertion failed");
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
 }
 
 TEST_F(Pdu_Test, PutToTheMaximum)
@@ -149,7 +143,7 @@ TEST_F(Pdu_Test, PutToTheMaximum)
 		data[i] = i;
 
 	ASSERT_TRUE(m_pdu->PutDown(&data[0], sizeof(data)));
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetWriteCursor());
 }
 
 TEST_F(Pdu_Test, PutPastTheMaximum)
@@ -160,9 +154,150 @@ TEST_F(Pdu_Test, PutPastTheMaximum)
 
 	ASSERT_TRUE(m_pdu->PutDown(&data[0], sizeof(data)));
 	ASSERT_DEATH({ m_pdu->PutDown((uint8_t)1); }, "Assertion failed");
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetWriteCursor());
+}
+#pragma endregion PutDown tests
+
+#pragma region PutDownRev tests
+TEST_F(Pdu_Test, PutDownRevUInt8)
+{
+	constexpr auto data = 0x12ui8;
+	m_pdu->SkipWrite(sizeof(data));
+	ASSERT_TRUE(m_pdu->PutDownRev(data));
+
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
+		ElementsAre(
+			0x12, 0x00));
+	ASSERT_EQ(0, TypedPdu()->GetWriteCursor());
 }
 
+TEST_F(Pdu_Test, PutDownRevUInt16)
+{
+	constexpr auto data = 0x1234ui16;
+	m_pdu->SkipWrite(sizeof(data));
+	ASSERT_TRUE(m_pdu->PutDownRev(data));
+
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
+		ElementsAre(
+			0x12, 0x34, 0x00));
+	ASSERT_EQ(0, TypedPdu()->GetWriteCursor());
+}
+
+TEST_F(Pdu_Test, PutDownRevUInt32)
+{
+	constexpr auto data = 0x12345678ui32;
+	m_pdu->SkipWrite(sizeof(data));
+	ASSERT_TRUE(m_pdu->PutDownRev(data));
+
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
+		ElementsAre(
+			0x12, 0x34, 0x56, 0x78, 0x00));
+	ASSERT_EQ(0, TypedPdu()->GetWriteCursor());
+}
+
+TEST_F(Pdu_Test, PutDownRevUInt64)
+{
+	constexpr auto data = 0x123456789abcdef0ui64;
+	m_pdu->SkipWrite(sizeof(data));
+	ASSERT_TRUE(m_pdu->PutDownRev(data));
+
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
+		ElementsAre(
+			0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x00));
+	ASSERT_EQ(0, TypedPdu()->GetWriteCursor());
+}
+
+TEST_F(Pdu_Test, PutDownRevInt64_GeneralCase)
+{
+	// The template specialisation for this type has been excluded in
+	// the unit test build so that the general template case can be tested
+	constexpr auto data = 0x123456789abcdef0i64;
+	m_pdu->SkipWrite(sizeof(data));
+	ASSERT_TRUE(m_pdu->PutDownRev(data));
+
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + sizeof(data) + 1),
+		ElementsAre(
+			0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0, 0x00));
+	ASSERT_EQ(0, TypedPdu()->GetWriteCursor());
+}
+#pragma endregion PutDownRev tests
+
+#pragma region Skip tests
+TEST_F(Pdu_Test, SkipReadIncreasesTheCursor)
+{
+	PopulatePdu();
+	uint64_t data64 = 0;
+	uint32_t data32 = 0;
+	uint16_t data16 = 0;
+	uint8_t data8 = 0;
+	// 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90
+	ASSERT_TRUE(m_pdu->PickUp(data64));
+	ASSERT_EQ(0x0123456789abcdefui64, data64);
+	ASSERT_EQ(8, m_pdu->GetReadCursor());
+
+	ASSERT_TRUE(m_pdu->PickUp(data32));
+	ASSERT_EQ(0x10203040ui32, data32);
+	ASSERT_EQ(12, m_pdu->GetReadCursor());
+
+	ASSERT_TRUE(m_pdu->PickUp(data16));
+	ASSERT_EQ(0x5060ui16, data16);
+	ASSERT_EQ(14, m_pdu->GetReadCursor());
+
+	ASSERT_TRUE(m_pdu->PickUp(data8));
+	ASSERT_EQ(0x70ui8, data8);
+	ASSERT_EQ(15, m_pdu->GetReadCursor());
+}
+
+TEST_F(Pdu_Test, SkipReadToTheMaximum)
+{
+	uint8_t data = 0;
+	ASSERT_TRUE(m_pdu->SkipRead(PDU_SIZE - 1));
+	ASSERT_TRUE(m_pdu->PickUp(data));
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetReadCursor());
+}
+
+TEST_F(Pdu_Test, SkipReadPastTheMaximum)
+{
+	uint8_t data = 0;
+	ASSERT_TRUE(m_pdu->SkipRead(PDU_SIZE));
+	ASSERT_DEATH({ m_pdu->PickUp(data); }, "Assertion failed");
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetReadCursor());
+}
+
+TEST_F(Pdu_Test, SkipWriteIncreasesTheCursor)
+{
+	ASSERT_TRUE(m_pdu->SkipWrite(1));
+	ASSERT_TRUE(m_pdu->PutDown(0x12ui8));
+	ASSERT_TRUE(m_pdu->SkipWrite(2));
+	ASSERT_TRUE(m_pdu->PutDown(0x3456ui16));
+
+	ASSERT_THAT(
+		std::vector<uint8_t>(m_pdu->Data(), m_pdu->Data() + 7),
+		ElementsAre(
+			0x00, 0x12, 0x00, 0x00, 0x34, 0x56, 0x00));
+	ASSERT_EQ(6, TypedPdu()->GetWriteCursor());
+}
+
+TEST_F(Pdu_Test, SkipWriteToTheMaximum)
+{
+	ASSERT_TRUE(m_pdu->SkipWrite(PDU_SIZE));
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetWriteCursor());
+}
+
+TEST_F(Pdu_Test, SkipWritePastTheMaximum)
+{
+	ASSERT_TRUE(m_pdu->SkipWrite(PDU_SIZE));
+	ASSERT_DEATH({ m_pdu->SkipWrite(1); }, "Assertion failed");
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetWriteCursor());
+}
+#pragma endregion Skip tests
+
+#pragma region Pickup tests
 TEST_F(Pdu_Test, PickUpUInt8)
 {
 	PopulatePdu();
@@ -199,13 +334,34 @@ TEST_F(Pdu_Test, PickUpUInt64)
 	ASSERT_EQ(data, 0x0123456789abcdef);
 }
 
+TEST_F(Pdu_Test, PickUpIsSequentialWithCursor)
+{
+	PopulatePdu();
+	uint64_t data64 = 0;
+	uint32_t data32 = 0;
+	uint16_t data16 = 0;
+	uint8_t data8 = 0;
+	// 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef, 0x10, 0x20, 0x30, 0x40, 0x50, 0x60, 0x70, 0x80, 0x90
+	ASSERT_TRUE(m_pdu->PickUp(data64));
+	ASSERT_EQ(0x0123456789abcdefui64, data64);
+
+	ASSERT_TRUE(m_pdu->PickUp(data32));
+	ASSERT_EQ(0x10203040ui32, data32);
+
+	ASSERT_TRUE(m_pdu->PickUp(data16));
+	ASSERT_EQ(0x5060ui16, data16);
+
+	ASSERT_TRUE(m_pdu->PickUp(data8));
+	ASSERT_EQ(0x70ui8, data8);
+}
+
 TEST_F(Pdu_Test, PickToTheMaximum)
 {
 	uint8_t data;
 	for (int i = 0; i < PDU_SIZE; ++i)
 		ASSERT_TRUE(m_pdu->PickUp(data));
 
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetReadCursor());
 }
 
 TEST_F(Pdu_Test, PickPastTheMaximum)
@@ -214,10 +370,12 @@ TEST_F(Pdu_Test, PickPastTheMaximum)
 	for (int i = 0; i < PDU_SIZE; ++i)
 		ASSERT_TRUE(m_pdu->PickUp(data));
 
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetReadCursor());
 	ASSERT_DEATH({ m_pdu->PickUp(data); }, "Assertion failed");
-	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetCursor());
+	ASSERT_EQ(PDU_SIZE, TypedPdu()->GetReadCursor());
 }
+
+#pragma endregion Pickup tests
 
 /*
 This is free and unencumbered software released into the public domain.

@@ -17,8 +17,8 @@ target_include_directories(${BINARY}_test PUBLIC
 
 target_include_directories(${BINARY}_lib PUBLIC
                            "${PROJECT_BINARY_DIR}"
-                           ) 
+                           )
 
 target_link_libraries(${BINARY}_test gtest_main)
 target_link_libraries(${BINARY}_test gmock_main)
-
+target_compile_definitions(${BINARY}_test PUBLIC UNITTEST)
