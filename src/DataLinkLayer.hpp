@@ -19,33 +19,45 @@
 #include "IProtoLayer.hpp"
 #include "IEncoder.hpp"
 #include "ICRCEngine.hpp"
+#include "IDiagnostics.hpp"
 #include "ProtoLib_Common.hpp"
-#include "CRC32_Software.hpp"
 
 template<typename TEncoder, typename TCRCEngine>
 class DatalinkLayer : public IProtoLayer
 {
 public:
+    explicit DatalinkLayer() :
+        m_diagnostics(NullDiagnostics::Instance())
+    { }
+
+    DatalinkLayer(IDiagnostics& diagnostics) :
+        m_diagnostics(diagnostics)
+    { }
+
     PduPtr Encode(PduPtr pdu) override 
     { 
         if (!pdu)
         {
+            m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+                << "Attempting to encode a null Pdu" << std::endl;
             assert(pdu);
             return PduPtr();
         }
 
         const auto len = pdu->GetDataLen();
-        if (pdu->GetCapacity() >= len + m_crc_engine.CrcSize())
+        if (pdu->GetMaxDataLen() >= len + m_crc_engine.CrcSize())
         {
             auto crc = m_crc_engine.CalcBlock(*pdu);
             pdu->ResetCursor();
-            pdu->Skip(len);
+            pdu->SkipWrite(len);
             pdu->SetDataLen(len + sizeof(crc));
             pdu->PutDown(crc);
         }
         else
         {
-            assert(pdu->GetCapacity() >= len + m_crc_engine.CrcSize());
+            m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+                << "Not enough space in the Pdu to add the CRC" << std::endl;
+            assert(false);
             return PduPtr();
         }
 
@@ -56,6 +68,8 @@ public:
     { 
         if (!pdu)
         {
+            m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+                << "Attempting to decode a null Pdu" << std::endl;
             assert(pdu);
             return PduPtr();
         }
@@ -68,11 +82,13 @@ public:
         if (len >= m_crc_engine.CrcSize())
         {
             pdu->ResetCursor();
-            pdu->Skip(len - sizeof(crc));
+            pdu->SkipRead(len - sizeof(crc));
             
             if (!pdu->PickUp(crc))
             {
                 // Couldn't read the CRC for some reason
+                m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+                    << "Could not extract the CRC from the Pdu" << std::endl;
                 assert(false);
                 return PduPtr();
             }
@@ -81,18 +97,21 @@ public:
         else
         {
             // Too small, not enough room for a CRC
+            m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+                << "Not enough data in the Pdu to extract the CRC" << std::endl;
             assert(pdu->GetDataLen() >= m_crc_engine.CrcSize());
             return PduPtr();
         }
 
         // Calculate and compare the CRC
         pdu->ResetCursor();
-        //auto crc_calc = m_crc_engine.CalcBlock(pdu->Data(), pdu->GetDataLen());
         auto crc_calc = m_crc_engine.CalcBlock(*pdu);
 
         // CRC match?
         if (crc_calc != crc)
         {
+            m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Info)
+                << "DataLinkLayer Decode: CRC mismatch" << std::endl;
             assert(crc_calc == crc);
             return PduPtr();
         }
@@ -104,8 +123,9 @@ protected:
 
 
 private:
-    const TEncoder m_frame_encoder;
-    TCRCEngine m_crc_engine;
+    IDiagnostics&       m_diagnostics;
+    const TEncoder      m_frame_encoder;
+    TCRCEngine          m_crc_engine;
 };
 
 

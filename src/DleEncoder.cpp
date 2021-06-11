@@ -12,6 +12,38 @@
 
 static const EncodeResult EMPTY = { 0, 0 };
 
+PduPtr DleEncoder::Encode(PduPtr pdu)
+{
+    if (!pdu)
+    {
+        m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+            << "Attempting to encode a null Pdu" << std::endl;
+        assert(pdu);
+        return PduPtr();
+    }
+
+    uint32_t max_len = MaxEncodeLen(pdu->GetDataLen());
+    if (pdu->GetMaxDataLen() < max_len)
+    {
+        m_diagnostics.Log(DiagnosticDomain::Comms, DiagnosticLogLevel::Error)
+            << "Not enough capacity in the Pdu to encode the data. Requires " << 
+            max_len << " bytes, " << pdu->GetCapacity() << " bytes available." <<
+            std::endl;
+        assert(false);
+        return PduPtr();
+    }
+
+    // Worst case is double the size. So, if we start reading from the end of the data,
+    // and start writing from the end of the capacity of the PDU, the write should never
+    // overtake the read. It means we migth finish in the middle of the buffer, but we 
+    // can just set the offset to account for that
+    pdu->ResetCursor();
+    pdu->SkipWrite(pdu->GetMaxDataLen());
+    //pdu->
+
+    return std::move(pdu);
+}
+
 EncodeResult DleEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
 {
     if (source_len == 0)
@@ -119,11 +151,13 @@ EncodeResult DleEncoder::Decode(const uint8_t* source, uint32_t source_len, uint
         static_cast<uint32_t>(target_cur - target));
 }
 
+// Calculate the worst-case size needed to encode a message
 uint32_t DleEncoder::MaxEncodeLen(uint32_t source_len) const
 {
     return source_len * 2;
 }
 
+// Calculate the worst-case size needed to decode a message
 uint32_t DleEncoder::MaxDecodeLen(uint32_t source_len) const
 {
     return source_len;

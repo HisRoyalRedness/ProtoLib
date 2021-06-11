@@ -11,7 +11,7 @@
 #pragma once
 
 #include "IEncoder.hpp"
-#include "ProtoLib_Common.hpp"
+#include "IDiagnostics.hpp"
 
 class DleEncoder final : public IFrameEncoder
 {
@@ -20,10 +20,22 @@ public:
     static const uint8_t ETX = 0x03;
     static const uint8_t DLE = 0x10;
 
+    explicit DleEncoder() :
+        m_diagnostics(NullDiagnostics::Instance())
+    { }
+
+    DleEncoder(IDiagnostics& diagnostics) :
+        m_diagnostics(diagnostics)
+    { }
+
+    PduPtr Encode(PduPtr pdu) override;
     EncodeResult Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
     EncodeResult Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
     uint32_t MaxEncodeLen(uint32_t source_len) const override;
     uint32_t MaxDecodeLen(uint32_t source_len) const override;
+
+private:
+    IDiagnostics& m_diagnostics;
 };
 
 

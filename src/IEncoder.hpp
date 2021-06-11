@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "ProtoPdu.hpp"
 #include "ProtoLib_Common.hpp"
 
 struct EncodeResult
@@ -29,6 +30,9 @@ struct EncodeResult
 class IFrameEncoder
 {
 public:
+    virtual PduPtr Encode(PduPtr pdu) = 0;
+
+
     virtual EncodeResult Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
     virtual EncodeResult Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) = 0;
     virtual uint32_t MaxEncodeLen(uint32_t source_len) const = 0;

@@ -14,6 +14,10 @@
 static const uint8_t FRAME_MARKER = 0;
 static const EncodeResult EMPTY = { 0, 0 };
 
+PduPtr CobsEncoder::Encode(PduPtr pdu)
+{
+    return std::move(pdu);
+}
 
 EncodeResult CobsEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
 {
