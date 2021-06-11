@@ -130,6 +130,14 @@ public:
         return true;
     }
 
+    bool PutDownRev(const uint8_t* value, size_t len)
+    {
+        for (size_t i = len; i > 0; ++i)
+            if (!PutDownSingleRev(value[i - 1]))
+                return false;
+        return true;
+    }
+
     template<typename T>
     bool PickUp(T& value)
     {
@@ -139,6 +147,28 @@ public:
         {
             if (PickUpSingle(byte))
                 value = (value << 8) | byte;
+            else
+            {
+                value = 0;
+                return false;
+            }
+        }
+        return true;
+    }
+
+    template<typename T>
+    bool PickUpRev(T& value)
+    {
+        value = 0;
+        uint8_t byte = 0;
+        int shift = 0;
+        for (size_t i = 0; i < sizeof(T); ++i)
+        {
+            if (PickUpSingleRev(byte))
+            {
+                value += static_cast<T>(byte) << shift;
+                shift += 8;
+            }
             else
             {
                 value = 0;
@@ -162,6 +192,7 @@ protected:
     /// <returns>True is the write was successful, false otherwise</returns>
     virtual bool PutDownSingleRev(const uint8_t data) = 0;
     virtual bool PickUpSingle(uint8_t& data) = 0;
+    virtual bool PickUpSingleRev(uint8_t& data) = 0;
 };
 
 
@@ -307,6 +338,21 @@ public:
         else
         {
             data = m_data[m_read_cursor++];
+            return true;
+        }
+    }
+
+    bool PickUpSingleRev(uint8_t& data) override
+    {
+        if (m_read_cursor <= m_offset)
+        {
+            // No more data to pick
+            assert(m_read_cursor > m_offset);
+            return false;
+        }
+        else
+        {
+            data = m_data[--m_read_cursor];
             return true;
         }
     }
