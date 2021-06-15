@@ -19,40 +19,40 @@ PduPtr CobsEncoder::Encode(PduPtr pdu)
     return std::move(pdu);
 }
 
-EncodeResult CobsEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
-{
-    if (source_len == 0)
-        return EMPTY;
-
-    uint32_t max_len = MaxEncodeLen(source_len);
-    assert(target_len >= max_len);
-    if (target_len < max_len)
-        return EMPTY;
-
-    assert(source);
-    assert(target);
-
-    uint8_t* encode = target; // Encoded byte pointer
-    uint8_t* codep = encode++; // Output code pointer
-    uint8_t code = 1; // Code value
-    const uint8_t* byte = source;
-
-    for (; source_len--; ++byte)
-    {
-        if (*byte != FRAME_MARKER) // Byte not zero, write it
-            *encode++ = *byte, ++code;
-
-        if (*byte == FRAME_MARKER || code == 0xff) // Input is zero or block completed, restart
-        {
-            *codep = code, code = 1, codep = encode;
-            if (*byte == FRAME_MARKER || source_len)
-                ++encode;
-        }
-    }
-    *codep = code; // Write final code value
-
-    return EncodeResult(byte - source, encode - target);
-} 
+//EncodeResult CobsEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
+//{
+//    if (source_len == 0)
+//        return EMPTY;
+//
+//    uint32_t max_len = MaxEncodeLen(source_len);
+//    assert(target_len >= max_len);
+//    if (target_len < max_len)
+//        return EMPTY;
+//
+//    assert(source);
+//    assert(target);
+//
+//    uint8_t* encode = target; // Encoded byte pointer
+//    uint8_t* codep = encode++; // Output code pointer
+//    uint8_t code = 1; // Code value
+//    const uint8_t* byte = source;
+//
+//    for (; source_len--; ++byte)
+//    {
+//        if (*byte != FRAME_MARKER) // Byte not zero, write it
+//            *encode++ = *byte, ++code;
+//
+//        if (*byte == FRAME_MARKER || code == 0xff) // Input is zero or block completed, restart
+//        {
+//            *codep = code, code = 1, codep = encode;
+//            if (*byte == FRAME_MARKER || source_len)
+//                ++encode;
+//        }
+//    }
+//    *codep = code; // Write final code value
+//
+//    return EncodeResult(byte - source, encode - target);
+//} 
 
 EncodeResult CobsEncoder::Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
 {

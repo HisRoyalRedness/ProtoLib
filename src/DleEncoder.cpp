@@ -34,52 +34,65 @@ PduPtr DleEncoder::Encode(PduPtr pdu)
     }
 
     // Worst case is double the size. So, if we start reading from the end of the data,
-    // and start writing from the end of the capacity of the PDU, the write should never
+    // and start writing at the end of the capacity of the PDU, the write should never
     // overtake the read. It means we migth finish in the middle of the buffer, but we 
     // can just set the offset to account for that
     pdu->ResetCursor();
-    pdu->SkipWrite(pdu->GetMaxDataLen());
-    //pdu->
+    pdu->SkipRead(pdu->GetDataLen());
+    pdu->SetDataLen(pdu->GetMaxDataLen());
+    pdu->SkipWrite(pdu->GetDataLen());
+    
+    uint8_t data = 0;
+    while (pdu->PickUpRev(data))
+    {
+        if (STX == data || DLE == data || ETX == data)
+        {
+            pdu->PutDownRev(data ^ DLE);
+            pdu->PutDownRev(DLE);
+        }
+        else
+            pdu->PutDownRev(data);
+    }
 
     return std::move(pdu);
 }
 
-EncodeResult DleEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
-{
-    if (source_len == 0)
-        return EMPTY;
-
-    uint32_t max_len = MaxEncodeLen(source_len);
-    assert(target_len >= max_len);
-    if (target_len < max_len)
-        return EMPTY;
-
-    assert(source);
-    assert(target);
-
-    const uint8_t* source_cur = source;
-    uint8_t* target_cur = target;
-
-    // Target len should always be greater than 1. We need
-    // to write 2 bytes if the data must be escaped
-    while (source_cur < source + source_len && target_cur < target + target_len - 1)
-    {
-        // Write the escape byte, escape the data, and write the escaped data
-        if (*source_cur == STX || *source_cur == ETX || *source_cur == DLE)
-        {
-            *target_cur++ = DLE;
-            *target_cur++ = *source_cur++ ^ DLE;
-        }
-        else
-        {
-            *target_cur++ = *source_cur++;
-        }
-    }
-
-    return EncodeResult(
-        static_cast<uint32_t>(source_cur - source), 
-        static_cast<uint32_t>(target_cur - target));
-}
+//EncodeResult DleEncoder::Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
+//{
+//    if (source_len == 0)
+//        return EMPTY;
+//
+//    uint32_t max_len = MaxEncodeLen(source_len);
+//    assert(target_len >= max_len);
+//    if (target_len < max_len)
+//        return EMPTY;
+//
+//    assert(source);
+//    assert(target);
+//
+//    const uint8_t* source_cur = source;
+//    uint8_t* target_cur = target;
+//
+//    // Target len should always be greater than 1. We need
+//    // to write 2 bytes if the data must be escaped
+//    while (source_cur < source + source_len && target_cur < target + target_len - 1)
+//    {
+//        // Write the escape byte, escape the data, and write the escaped data
+//        if (*source_cur == STX || *source_cur == ETX || *source_cur == DLE)
+//        {
+//            *target_cur++ = DLE;
+//            *target_cur++ = *source_cur++ ^ DLE;
+//        }
+//        else
+//        {
+//            *target_cur++ = *source_cur++;
+//        }
+//    }
+//
+//    return EncodeResult(
+//        static_cast<uint32_t>(source_cur - source), 
+//        static_cast<uint32_t>(target_cur - target));
+//}
 
 EncodeResult DleEncoder::Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len)
 {

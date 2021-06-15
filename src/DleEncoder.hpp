@@ -29,7 +29,7 @@ public:
     { }
 
     PduPtr Encode(PduPtr pdu) override;
-    EncodeResult Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
+    //EncodeResult Encode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
     EncodeResult Decode(const uint8_t* source, uint32_t source_len, uint8_t* target, uint32_t target_len) override;
     uint32_t MaxEncodeLen(uint32_t source_len) const override;
     uint32_t MaxDecodeLen(uint32_t source_len) const override;

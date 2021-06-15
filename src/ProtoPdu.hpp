@@ -347,7 +347,7 @@ public:
         if (m_read_cursor <= m_offset)
         {
             // No more data to pick
-            assert(m_read_cursor > m_offset);
+            //assert(m_read_cursor > m_offset);
             return false;
         }
         else

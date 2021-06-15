@@ -11,12 +11,16 @@
 #pragma once
 
 #include "Test_Common.hpp"
+#include "ProtoPdu.hpp"
 #include <functional>
 
 template<typename Encoder, bool BufferPrintingDefault>
 class TestBase_Encoder : public TestBase
 {
 public:
+	static constexpr size_t PDU_SIZE = 100;
+	static constexpr size_t PDU_COUNT = 2;
+
 	template<typename T>
 	std::vector<T> ToVec(std::initializer_list<T> init) const { return std::vector<T>(init); }
 
@@ -33,6 +37,7 @@ protected:
 	std::vector<uint8_t> Decode(const std::vector<uint8_t>& source, bool print_source = BufferPrintingDefault, bool print_target = BufferPrintingDefault);
 
 	Encoder _encoder;
+	PduAllocator<PDU_SIZE, PDU_COUNT> m_pdu_alloc;
 };
 
 
@@ -55,23 +60,32 @@ std::vector<uint8_t> TestBase_Encoder<Encoder, BufferPrintingDefault>::Encode(co
 	if (print_source)
 		PrintBuffer("Clear", source);
 
-	std::vector<uint8_t> target(_encoder.MaxEncodeLen(source.size()));
-	EncodeResult result = _encoder.Encode(source.data(), source.size(), target.data(), target.size());
+	auto pdu = m_pdu_alloc.Allocate();
+	for (auto& b : source)
+		pdu->PutDown(b);
+	pdu->SetDataLen(source.size());
+	pdu = _encoder.Encode(std::move(pdu));
+	//std::vector<uint8_t> target(_encoder.MaxEncodeLen(source.size()));
+	//EncodeResult result = _encoder.Encode(source.data(), source.size(), target.data(), target.size());
 
-	// Make sure bytes read and written aren't more than they should be
-	TEST_ASSERT(result.BytesRead <= source.size(), "Too many bytes read");
-	TEST_ASSERT(result.BytesWritten <= target.size(), "Too many bytes written");
-	TEST_ASSERT(!result.Error, "Encoding error");
+	//// Make sure bytes read and written aren't more than they should be
+	//TEST_ASSERT(result.BytesRead <= source.size(), "Too many bytes read");
+	//TEST_ASSERT(result.BytesWritten <= target.size(), "Too many bytes written");
+	//TEST_ASSERT(!result.Error, "Encoding error");
 
-	if (result.BytesWritten == 0)
-		target.clear();
-	else if (result.BytesWritten != target.size())
-		target.resize(result.BytesWritten);
+	//if (result.BytesWritten == 0)
+	//	target.clear();
+	//else if (result.BytesWritten != target.size())
+	//	target.resize(result.BytesWritten);
 
-	if (print_target)
-		PrintBuffer("Encoded", target);
+	//if (print_target)
+	//	PrintBuffer("Encoded", target);
 
-	return target;
+	//return target;
+
+
+	EXPECT_TRUE(false);
+	return std::vector<uint8_t>();
 }
 
 template<typename Encoder, bool BufferPrintingDefault>
